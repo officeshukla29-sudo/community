@@ -51,6 +51,7 @@ input, textarea { font-family: inherit; }
 .nav-tabs button { background: none; border: none; border-radius: 7px; padding: 6px 14px; font-size: 13px; color: var(--ink-soft); font-weight: 600; }
 .nav-tabs button.active { background: var(--indigo); color: #fff; }
 .nav-user { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--ink-soft); }
+.nav-user span.profile-name-btn { cursor: pointer; font-weight: 600; color: var(--indigo-dark); }
 .nav-user button { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; font-size: 13px; color: var(--ink); }
 .main { max-width: 560px; margin: 0 auto; padding: 28px 16px 80px; }
 .main-chat { max-width: 640px; padding: 20px 16px; height: calc(100vh - 130px); display: flex; flex-direction: column; }
@@ -105,6 +106,33 @@ input, textarea { font-family: inherit; }
 .recording-controls button { border: 1px solid var(--border); background: var(--card); border-radius: 7px; padding: 8px 16px; font-size: 13px; }
 
 .hidden { display: none !important; }
+
+/* People / friends / inbox */
+.people-panel { display: flex; flex-direction: column; gap: 20px; }
+.people-search-form { display: flex; gap: 8px; }
+.people-search-form input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; }
+.people-search-form button { border: none; background: var(--indigo); color: #fff; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; }
+.people-section h3 { font-family: 'Fraunces', serif; font-size: 16px; margin: 0 0 10px; color: var(--indigo-dark); }
+.person-card { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.person-card .avatar { background: var(--sage); }
+.person-info { flex: 1; min-width: 0; }
+.person-name { font-weight: 600; font-size: 14px; }
+.person-email { font-size: 12px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person-action { display: flex; gap: 6px; flex-shrink: 0; }
+.person-action button { border: 1px solid var(--border); background: var(--paper); border-radius: 7px; padding: 6px 12px; font-size: 12px; font-weight: 600; }
+.person-action .add-friend-btn, .person-action .accept-btn, .person-action .open-thread-btn, .person-action .message-friend-btn { background: var(--indigo); color: #fff; border: none; }
+.person-action .decline-btn { color: var(--danger); border-color: var(--danger); }
+.person-status { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+
+.chat-thread-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.chat-thread-header button { background: none; border: none; color: var(--indigo); font-weight: 600; font-size: 13px; padding: 0; }
+.chat-thread-header span { font-weight: 600; font-size: 14px; }
+
+/* Profile modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(28,28,30,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.modal-box { width: 100%; max-width: 380px; background: var(--card); border-radius: 14px; padding: 28px; box-shadow: 0 20px 40px -20px rgba(28,28,30,0.3); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.modal-cancel-btn { border: 1px solid var(--border); background: var(--paper); border-radius: 8px; padding: 11px 16px; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -151,9 +179,14 @@ let feedPosts = [];
 let feedHasMore = true;
 let feedInterval = null;
 
-let chatMessages = [];
-let lastChatTimestamp = null;
-let chatInterval = null;
+// Generalized conversation state — used for both the community room ("general")
+// and 1:1 DM threads (conversationId = dm_<sortedUserIds>)
+let activeConversationId = 'general';
+let activeConversationTitle = null; // null = community chat; else the friend's name (DM)
+let conversationMessages = [];
+let conversationLastTimestamp = null;
+let conversationInterval = null;
+
 let recordingKind = null; // null | 'audio' | 'video'
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -161,6 +194,12 @@ let activeStream = null;
 
 const openComments = {}; // postId -> bool
 const commentsCache = {}; // postId -> array
+
+// People / friends / inbox state
+let suggestedPeople = [];
+let friendRequests = [];
+let friendsList = [];
+let selectedFriend = null; // { userId, name } — set when a DM thread is open in the Inbox tab
 
 /* ============================================================
    API helper
@@ -212,6 +251,10 @@ function escapeHtml(str) {
   return (str || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+function dmId(userIdA, userIdB) {
+  return 'dm_' + [userIdA, userIdB].sort().join('_');
+}
+
 /* ============================================================
    Root render dispatcher
    ============================================================ */
@@ -221,8 +264,14 @@ function render() {
   if (!currentUser) { root.innerHTML = authScreenHtml('login'); attachAuthHandlers('login'); return; }
   root.innerHTML = appShellHtml();
   attachShellHandlers();
-  if (currentTab === 'feed') { renderFeedPanel(); startFeedPolling(); stopChatPolling(); }
-  else { renderChatPanel(); startChatPolling(); stopFeedPolling(); }
+
+  stopFeedPolling();
+  stopConversationPolling();
+
+  if (currentTab === 'feed') { renderFeedPanel(); startFeedPolling(); }
+  else if (currentTab === 'chat') { enterConversation('general', null); }
+  else if (currentTab === 'people') { renderPeoplePanel(); }
+  else if (currentTab === 'inbox') { renderInboxPanel(); }
 }
 
 /* ============================================================
@@ -357,24 +406,29 @@ function appShellHtml() {
         <div class="nav-tabs">
           <button id="tab-feed" class="${currentTab === 'feed' ? 'active' : ''}">Feed</button>
           <button id="tab-chat" class="${currentTab === 'chat' ? 'active' : ''}">Chat</button>
+          <button id="tab-people" class="${currentTab === 'people' ? 'active' : ''}">People</button>
+          <button id="tab-inbox" class="${currentTab === 'inbox' ? 'active' : ''}">Inbox</button>
         </div>
       </div>
       <div class="nav-user">
-        <span>${escapeHtml(currentUser.name)}</span>
+        <span id="profile-open-btn" class="profile-name-btn">${escapeHtml(currentUser.name)}</span>
         <button id="logout-btn">Log out</button>
       </div>
     </nav>
-    <main class="main ${currentTab === 'chat' ? 'main-chat' : ''}" id="main-panel"></main>
+    <main class="main ${currentTab === 'chat' || currentTab === 'inbox' ? 'main-chat' : ''}" id="main-panel"></main>
   </div>`;
 }
 
 function attachShellHandlers() {
   document.getElementById('tab-feed').addEventListener('click', () => { currentTab = 'feed'; render(); });
   document.getElementById('tab-chat').addEventListener('click', () => { currentTab = 'chat'; render(); });
+  document.getElementById('tab-people').addEventListener('click', () => { currentTab = 'people'; render(); });
+  document.getElementById('tab-inbox').addEventListener('click', () => { currentTab = 'inbox'; render(); });
+  document.getElementById('profile-open-btn').addEventListener('click', openProfileModal);
   document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.removeItem(USER_KEY);
     currentUser = null;
-    stopFeedPolling(); stopChatPolling();
+    stopFeedPolling(); stopConversationPolling();
     render();
   });
 }
@@ -553,30 +607,43 @@ function renderCommentsInto(container, postId) {
 }
 
 /* ============================================================
-   Chat
+   Chat (generalized — powers both the community room and DMs)
    ============================================================ */
-async function loadChatInitial() {
-  const res = await apiCall('getMessages', { conversationId: 'general' });
-  chatMessages = res.messages;
-  lastChatTimestamp = chatMessages.length ? chatMessages[chatMessages.length - 1].createdAt : null;
+async function loadConversationInitial() {
+  const res = await apiCall('getMessages', { conversationId: activeConversationId });
+  conversationMessages = res.messages;
+  conversationLastTimestamp = conversationMessages.length
+    ? conversationMessages[conversationMessages.length - 1].createdAt
+    : null;
   renderChatPanel();
 }
 
-async function pollChat() {
-  const res = await apiCall('getMessages', { conversationId: 'general', since: lastChatTimestamp });
+async function pollConversation() {
+  const res = await apiCall('getMessages', { conversationId: activeConversationId, since: conversationLastTimestamp });
   if (res.messages.length) {
-    chatMessages = chatMessages.concat(res.messages);
-    lastChatTimestamp = res.messages[res.messages.length - 1].createdAt;
+    conversationMessages = conversationMessages.concat(res.messages);
+    conversationLastTimestamp = res.messages[res.messages.length - 1].createdAt;
     renderChatPanel();
   }
 }
 
-function startChatPolling() {
-  if (chatInterval) return;
-  loadChatInitial();
-  chatInterval = setInterval(pollChat, 4000);
+function enterConversation(conversationId, title) {
+  activeConversationId = conversationId;
+  activeConversationTitle = title || null;
+  conversationMessages = [];
+  conversationLastTimestamp = null;
+  stopConversationPolling();
+  loadConversationInitial();
+  conversationInterval = setInterval(pollConversation, 4000);
 }
-function stopChatPolling() { if (chatInterval) { clearInterval(chatInterval); chatInterval = null; } }
+
+function stopConversationPolling() { if (conversationInterval) { clearInterval(conversationInterval); conversationInterval = null; } }
+
+function exitToInboxList() {
+  stopConversationPolling();
+  selectedFriend = null;
+  renderInboxPanel();
+}
 
 function chatBubbleHtml(m) {
   const mine = m.senderId === currentUser.userId;
@@ -596,21 +663,31 @@ function chatBubbleHtml(m) {
 function renderChatPanel() {
   const panel = document.getElementById('main-panel');
   if (!panel) return;
+  const isDm = !!activeConversationTitle;
+  const headerHtml = isDm ? `
+    <div class="chat-thread-header">
+      <button id="chat-back-btn">← Back</button>
+      <span>${escapeHtml(activeConversationTitle)}</span>
+    </div>` : '';
+  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the community…';
+
   panel.innerHTML = `
     <div class="chat">
+      ${headerHtml}
       <div class="chat-messages" id="chat-messages">
-        ${chatMessages.map(chatBubbleHtml).join('')}
+        ${conversationMessages.map(chatBubbleHtml).join('')}
       </div>
       <div id="recording-area"></div>
       <form class="chat-input-row" id="chat-form">
         <button type="button" id="rec-audio-btn" title="Record audio">🎤</button>
         <button type="button" id="rec-video-btn" title="Record video">🎥</button>
-        <input id="chat-text" placeholder="Message the community…" />
+        <input id="chat-text" placeholder="${placeholder}" />
         <button type="submit">Send</button>
       </form>
     </div>`;
   const msgBox = document.getElementById('chat-messages');
   msgBox.scrollTop = msgBox.scrollHeight;
+  if (isDm) document.getElementById('chat-back-btn').addEventListener('click', exitToInboxList);
   attachChatHandlers();
 }
 
@@ -621,9 +698,9 @@ function attachChatHandlers() {
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
-    const res = await apiCall('sendMessage', { conversationId: 'general', senderId: currentUser.userId, senderName: currentUser.name, type: 'text', text });
-    chatMessages.push(res.message);
-    lastChatTimestamp = res.message.createdAt;
+    const res = await apiCall('sendMessage', { conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, type: 'text', text });
+    conversationMessages.push(res.message);
+    conversationLastTimestamp = res.message.createdAt;
     renderChatPanel();
   });
 
@@ -685,11 +762,11 @@ async function stopRecording() {
   try {
     const base64 = await blobToBase64(blob);
     const res = await apiCall('sendMessage', {
-      conversationId: 'general', senderId: currentUser.userId, senderName: currentUser.name,
+      conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name,
       type: kind, mediaBase64: base64, mediaMime: blob.type, mediaName: `${kind}-${Date.now()}.webm`,
     });
-    chatMessages.push(res.message);
-    lastChatTimestamp = res.message.createdAt;
+    conversationMessages.push(res.message);
+    conversationLastTimestamp = res.message.createdAt;
     renderChatPanel();
   } catch (err) {
     alert('Failed to send: ' + err.message);
@@ -702,6 +779,233 @@ function cancelRecording() {
   recordingKind = null;
   document.getElementById('recording-area').innerHTML = '';
   document.getElementById('chat-form').classList.remove('hidden');
+}
+
+/* ============================================================
+   People — search, friend requests, people you may know
+   ============================================================ */
+function personCardHtml(user, actionHtml) {
+  return `
+  <div class="person-card">
+    <div class="avatar">${escapeHtml((user.name || '?')[0] || '?').toUpperCase()}</div>
+    <div class="person-info">
+      <div class="person-name">${escapeHtml(user.name)}</div>
+      <div class="person-email">${escapeHtml(user.email)}</div>
+    </div>
+    <div class="person-action">${actionHtml}</div>
+  </div>`;
+}
+
+function friendStatusActionHtml(user) {
+  if (user.friendStatus === 'accepted') return `<span class="person-status">Friends</span>`;
+  if (user.friendStatus === 'pending_sent') return `<span class="person-status">Requested</span>`;
+  if (user.friendStatus === 'pending_received') return `<span class="person-status">Check requests ↓</span>`;
+  return `<button class="add-friend-btn" data-user-id="${user.userId}">Add friend</button>`;
+}
+
+function renderPeoplePanel() {
+  const panel = document.getElementById('main-panel');
+  panel.innerHTML = `
+    <div class="people-panel">
+      <form class="people-search-form" id="people-search-form">
+        <input id="people-search-input" placeholder="Search people by name or email…" />
+        <button type="submit">Search</button>
+      </form>
+      <div id="people-search-results"></div>
+
+      <section class="people-section">
+        <h3>Friend requests</h3>
+        <div id="people-requests"><p class="post-time">Loading…</p></div>
+      </section>
+
+      <section class="people-section">
+        <h3>People you may know</h3>
+        <div id="people-suggested"><p class="post-time">Loading…</p></div>
+      </section>
+
+      <section class="people-section">
+        <h3>My friends</h3>
+        <div id="people-friends"><p class="post-time">Loading…</p></div>
+      </section>
+    </div>`;
+
+  document.getElementById('people-search-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const query = document.getElementById('people-search-input').value.trim();
+    const box = document.getElementById('people-search-results');
+    if (!query) { box.innerHTML = ''; return; }
+    box.innerHTML = '<p class="post-time">Searching…</p>';
+    const res = await apiCall('searchUsers', { query, currentUserId: currentUser.userId });
+    box.innerHTML = res.users.length
+      ? `<div class="people-section"><h3>Search results</h3>${res.users.map(u => personCardHtml(u, friendStatusActionHtml(u))).join('')}</div>`
+      : '<p class="empty-state">No matches.</p>';
+    attachPeopleActionHandlers();
+  });
+
+  refreshPeopleData();
+}
+
+async function refreshPeopleData() {
+  const [suggestedRes, requestsRes, friendsRes] = await Promise.all([
+    apiCall('getPeopleYouMayKnow', { userId: currentUser.userId, limit: 10 }),
+    apiCall('getFriendRequests', { userId: currentUser.userId }),
+    apiCall('getFriends', { userId: currentUser.userId }),
+  ]);
+  suggestedPeople = suggestedRes.users;
+  friendRequests = requestsRes.requests;
+  friendsList = friendsRes.friends;
+
+  const reqBox = document.getElementById('people-requests');
+  const sugBox = document.getElementById('people-suggested');
+  const frBox = document.getElementById('people-friends');
+  if (!reqBox) return; // panel no longer visible (tab switched away)
+
+  reqBox.innerHTML = friendRequests.length
+    ? friendRequests.map(r => personCardHtml(r.from, `
+        <button class="accept-btn" data-friendship-id="${r.friendshipId}">Accept</button>
+        <button class="decline-btn" data-friendship-id="${r.friendshipId}">Decline</button>`)).join('')
+    : '<p class="empty-state">No pending requests.</p>';
+
+  sugBox.innerHTML = suggestedPeople.length
+    ? suggestedPeople.map(u => personCardHtml(u, `<button class="add-friend-btn" data-user-id="${u.userId}">Add friend</button>`)).join('')
+    : '<p class="empty-state">No suggestions right now.</p>';
+
+  frBox.innerHTML = friendsList.length
+    ? friendsList.map(u => personCardHtml(u, `<button class="message-friend-btn" data-user-id="${u.userId}" data-user-name="${escapeHtml(u.name)}">Message</button>`)).join('')
+    : '<p class="empty-state">No friends yet — send some requests above.</p>';
+
+  attachPeopleActionHandlers();
+}
+
+function attachPeopleActionHandlers() {
+  document.querySelectorAll('.add-friend-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        await apiCall('sendFriendRequest', { fromUserId: currentUser.userId, fromName: currentUser.name, toUserId: btn.dataset.userId });
+        refreshPeopleData();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false; btn.textContent = 'Add friend';
+      }
+    });
+  });
+
+  document.querySelectorAll('.accept-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await apiCall('respondFriendRequest', { friendshipId: btn.dataset.friendshipId, accept: true });
+      refreshPeopleData();
+    });
+  });
+
+  document.querySelectorAll('.decline-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await apiCall('respondFriendRequest', { friendshipId: btn.dataset.friendshipId, accept: false });
+      refreshPeopleData();
+    });
+  });
+
+  document.querySelectorAll('.message-friend-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedFriend = { userId: btn.dataset.userId, name: btn.dataset.userName };
+      currentTab = 'inbox';
+      render();
+    });
+  });
+}
+
+/* ============================================================
+   Inbox — list of friends, opens a DM thread (reuses chat panel)
+   ============================================================ */
+function renderInboxPanel() {
+  if (selectedFriend) {
+    enterConversation(dmId(currentUser.userId, selectedFriend.userId), selectedFriend.name);
+    return;
+  }
+  loadInboxFriendList();
+}
+
+async function loadInboxFriendList() {
+  const panel = document.getElementById('main-panel');
+  panel.innerHTML = `<div class="people-panel"><section class="people-section"><h3>Messages</h3><div id="inbox-friend-list"><p class="post-time">Loading…</p></div></section></div>`;
+  const res = await apiCall('getFriends', { userId: currentUser.userId });
+  const box = document.getElementById('inbox-friend-list');
+  if (!box) return;
+  box.innerHTML = res.friends.length
+    ? res.friends.map(u => personCardHtml(u, `<button class="open-thread-btn" data-user-id="${u.userId}" data-user-name="${escapeHtml(u.name)}">Open</button>`)).join('')
+    : '<p class="empty-state">Add friends in the People tab to start messaging.</p>';
+
+  document.querySelectorAll('.open-thread-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedFriend = { userId: btn.dataset.userId, name: btn.dataset.userName };
+      renderInboxPanel();
+    });
+  });
+}
+
+/* ============================================================
+   Profile modal — edit name / bio / photo
+   ============================================================ */
+function openProfileModal() {
+  const existing = document.getElementById('profile-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'profile-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3 class="card-title" style="font-size:22px;">Edit profile</h3>
+      <form class="card-form" id="profile-form">
+        <input id="profile-name" value="${escapeHtml(currentUser.name)}" placeholder="Name" required />
+        <textarea id="profile-bio" placeholder="Bio" rows="3">${escapeHtml(currentUser.bio || '')}</textarea>
+        <label class="file-btn">
+          <span id="profile-photo-label">Change photo</span>
+          <input type="file" id="profile-photo-input" accept="image/*" hidden />
+        </label>
+        <p class="form-error hidden" id="profile-error"></p>
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel-btn" id="profile-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary" id="profile-save-btn" style="margin-top:0;">Save</button>
+        </div>
+      </form>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('profile-cancel-btn').addEventListener('click', () => overlay.remove());
+
+  const photoInput = document.getElementById('profile-photo-input');
+  photoInput.addEventListener('change', () => {
+    document.getElementById('profile-photo-label').textContent = photoInput.files[0] ? photoInput.files[0].name : 'Change photo';
+  });
+
+  document.getElementById('profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('profile-error');
+    const saveBtn = document.getElementById('profile-save-btn');
+    errorEl.classList.add('hidden');
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    try {
+      const name = document.getElementById('profile-name').value.trim();
+      const bio = document.getElementById('profile-bio').value.trim();
+      const file = photoInput.files[0] || null;
+      let photoBase64 = null;
+      if (file) photoBase64 = await fileToBase64(file);
+      const res = await apiCall('updateProfile', {
+        userId: currentUser.userId, name, bio,
+        photoBase64, photoMime: file?.type, photoName: file?.name,
+      });
+      currentUser = res.user;
+      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+      overlay.remove();
+      render();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.remove('hidden');
+      saveBtn.disabled = false; saveBtn.textContent = 'Save';
+    }
+  });
 }
 
 /* ============================================================
