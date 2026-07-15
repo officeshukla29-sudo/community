@@ -140,27 +140,81 @@ const openComments = {}; // postId -> bool
 const commentsCache = {}; // postId -> array
 
 /* ============================================================
-   API helper — FIXED with better error handling
+   API helper — IMPROVED with better error handling & retry logic
    ============================================================ */
-async function apiCall(action, payload = {}) {
+async function apiCall(action, payload = {}, options = {}) {
   if (!API_URL) throw new Error('No API URL configured');
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, ...payload }),
-    });
+  
+  const maxRetries = options.retries ?? 2;
+  const timeoutMs = options.timeout ?? 10000;
+  const backoffMs = options.backoffMs ?? 500;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload }),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Try to parse response text for better error messages
+      let data;
+      const contentType = res.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
+      if (isJson) {
+        try {
+          data = await res.json();
+        } catch (parseErr) {
+          throw new Error(`Invalid JSON response from server (HTTP ${res.status})`);
+        }
+      } else {
+        const text = await res.text();
+        throw new Error(`Expected JSON but got ${res.status} ${res.statusText}: ${text.substring(0, 100)}`);
+      }
+      
+      // Check for HTTP errors
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${data.error || res.statusText}`);
+      }
+      
+      // Check for API-level errors
+      if (!data.ok) {
+        throw new Error(data.error || 'Request failed');
+      }
+      
+      return data;
+      
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // Determine if the error is retryable
+      const isTimeout = error.name === 'AbortError';
+      const isNetworkError = error instanceof TypeError || isTimeout;
+      const isRetryable = isNetworkError && attempt < maxRetries;
+      
+      if (isRetryable) {
+        // Exponential backoff before retrying
+        const delayMs = backoffMs * Math.pow(2, attempt);
+        console.warn(`API attempt ${attempt + 1} failed, retrying in ${delayMs}ms:`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+      
+      // Provide clear error message to user
+      const errorMsg = isTimeout 
+        ? `Request timed out. Check your internet connection.`
+        : `Failed to connect to the backend: ${error.message}`;
+      
+      console.error('API Error:', error);
+      throw new Error(errorMsg);
     }
-    
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Request failed');
-    return data;
-  } catch (error) {
-    console.error('API Error:', error);
-    throw new Error(error.message || 'Failed to connect to the backend');
   }
 }
 
@@ -237,11 +291,17 @@ function attachSetupHandlers() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Connecting…';
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const testRes = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'getPosts', offset: 0, limit: 1 }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       const data = await testRes.json();
       if (data.ok === undefined) throw new Error('Unexpected response from the script.');
       // ok:false with "Unknown action" would mean something is very wrong;
@@ -250,7 +310,10 @@ function attachSetupHandlers() {
       localStorage.setItem(CONFIG_KEY, url);
       render();
     } catch (err) {
-      errorEl.textContent = 'Could not connect: ' + err.message + '. Check that the deployment access is set to "Anyone" and that you copied the /exec URL (not /dev).';
+      const msg = err.name === 'AbortError' 
+        ? 'Connection timeout. Check the URL and try again.'
+        : 'Could not connect: ' + err.message + '. Check that the deployment access is set to "Anyone" and that you copied the /exec URL (not /dev).';
+      errorEl.textContent = msg;
       errorEl.classList.remove('hidden');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Connect';
