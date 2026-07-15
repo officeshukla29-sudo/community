@@ -249,6 +249,24 @@ function render() {
   if (!currentUser) { root.innerHTML = authScreenHtml('login'); attachAuthHandlers('login'); return; }
   root.innerHTML = appShellHtml();
   attachShellHandlers();
+  // Preview Admin Login
+if (mode === 'login') {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+
+    // Fixed Admin ID & Password
+    if (email === "admin" && password === "admin") {
+        currentUser = {
+            userId: "admin001",
+            name: "Administrator",
+            email: "admin"
+        };
+
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+        render();
+        return;
+    }
+}
   if (currentTab === 'feed') { renderFeedPanel(); startFeedPolling(); stopChatPolling(); }
   else { renderChatPanel(); startChatPolling(); stopFeedPolling(); }
 }
