@@ -117,7 +117,7 @@ input, textarea { font-family: inherit; }
    ============================================================ */
 const CONFIG_KEY = 'nexus_api_url';
 const USER_KEY = 'nexus_community_user';
-const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbwaPWWg7XI3kDh2PL4FTd-BZ-NYmb8DbSWWAhjAwtD_mWnzziP-FSX1YxWgcNy8oBWs/exec';
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxbI2l7s8erxJlKYHnYL-syBI5v4ZRo1v_CEWhhFlIoqsi8hUWFr9L842AdfIYlaTJ9pA/exec';
 let API_URL = localStorage.getItem(CONFIG_KEY) || DEFAULT_API_URL;
 if (!localStorage.getItem(CONFIG_KEY)) localStorage.setItem(CONFIG_KEY, API_URL);
 let currentUser = null;
