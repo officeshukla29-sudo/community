@@ -115,11 +115,34 @@ input, textarea { font-family: inherit; }
 /* ============================================================
    CONFIG — persisted API URL for the Apps Script backend
    ============================================================ */
+/* ============================================================
+   Visible error banner — so mobile users can see JS errors
+   without needing devtools/console access
+   ============================================================ */
+window.addEventListener('error', (e) => showFatalError(e.message));
+window.addEventListener('unhandledrejection', (e) => showFatalError(e.reason?.message || String(e.reason)));
+
+function showFatalError(message) {
+  let banner = document.getElementById('fatal-error-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'fatal-error-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#B5473F;color:#fff;padding:12px 16px;font-size:13px;z-index:9999;font-family:sans-serif;';
+    document.body.prepend(banner);
+  }
+  banner.textContent = 'Error: ' + message;
+}
+
 const CONFIG_KEY = 'nexus_api_url';
 const USER_KEY = 'nexus_community_user';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxbI2l7s8erxJlKYHnYL-syBI5v4ZRo1v_CEWhhFlIoqsi8hUWFr9L842AdfIYlaTJ9pA/exec';
-let API_URL = localStorage.getItem(CONFIG_KEY) || DEFAULT_API_URL;
-if (!localStorage.getItem(CONFIG_KEY)) localStorage.setItem(CONFIG_KEY, API_URL);
+// Always sync to DEFAULT_API_URL — overwrites any stale URL saved from a previous version of this file
+const previousApiUrl = localStorage.getItem(CONFIG_KEY);
+if (previousApiUrl && previousApiUrl !== DEFAULT_API_URL) {
+  localStorage.removeItem(USER_KEY); // old session belongs to a different sheet's user list
+}
+let API_URL = DEFAULT_API_URL;
+localStorage.setItem(CONFIG_KEY, API_URL);
 let currentUser = null;
 try { currentUser = JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch { currentUser = null; }
 
@@ -140,82 +163,31 @@ const openComments = {}; // postId -> bool
 const commentsCache = {}; // postId -> array
 
 /* ============================================================
-   API helper — IMPROVED with better error handling & retry logic
+   API helper
    ============================================================ */
-async function apiCall(action, payload = {}, options = {}) {
+async function apiCall(action, payload = {}) {
   if (!API_URL) throw new Error('No API URL configured');
-  
-  const maxRetries = options.retries ?? 2;
-  const timeoutMs = options.timeout ?? 10000;
-  const backoffMs = options.backoffMs ?? 500;
-  
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...payload }),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      // Try to parse response text for better error messages
-      let data;
-      const contentType = res.headers.get('content-type');
-      const isJson = contentType && contentType.includes('application/json');
-      
-      if (isJson) {
-        try {
-          data = await res.json();
-        } catch (parseErr) {
-          throw new Error(`Invalid JSON response from server (HTTP ${res.status})`);
-        }
-      } else {
-        const text = await res.text();
-        throw new Error(`Expected JSON but got ${res.status} ${res.statusText}: ${text.substring(0, 100)}`);
-      }
-      
-      // Check for HTTP errors
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${data.error || res.statusText}`);
-      }
-      
-      // Check for API-level errors
-      if (!data.ok) {
-        throw new Error(data.error || 'Request failed');
-      }
-      
-      return data;
-      
-    } catch (error) {
-      clearTimeout(timeoutId);
-      
-      // Determine if the error is retryable
-      const isTimeout = error.name === 'AbortError';
-      const isNetworkError = error instanceof TypeError || isTimeout;
-      const isRetryable = isNetworkError && attempt < maxRetries;
-      
-      if (isRetryable) {
-        // Exponential backoff before retrying
-        const delayMs = backoffMs * Math.pow(2, attempt);
-        console.warn(`API attempt ${attempt + 1} failed, retrying in ${delayMs}ms:`, error.message);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        continue;
-      }
-      
-      // Provide clear error message to user
-      const errorMsg = isTimeout 
-        ? `Request timed out. Check your internet connection.`
-        : `Failed to connect to the backend: ${error.message}`;
-      
-      console.error('API Error:', error);
-      throw new Error(errorMsg);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, ...payload }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out after 15s — check your internet connection.');
     }
+    throw new Error('Network error: ' + err.message);
+  } finally {
+    clearTimeout(timeoutId);
   }
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Request failed');
+  return data;
 }
 
 function fileToBase64(file) {
@@ -249,37 +221,6 @@ function render() {
   if (!currentUser) { root.innerHTML = authScreenHtml('login'); attachAuthHandlers('login'); return; }
   root.innerHTML = appShellHtml();
   attachShellHandlers();
-if (mode === 'login') {
-
-    // Preview Admin Login
-    if (email === "admin@gmail.com" && password === "admin123") {
-
-        currentUser = {
-            userId: "admin001",
-            name: "Administrator",
-            email: "admin@gmail.com"
-        };
-
-        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-        render();
-        return;
-    }
-
-    // Original API Login
-    result = await apiCall('login', { email, password });
-
-} else {
-
-    const name = document.getElementById('auth-name').value.trim();
-    result = await apiCall('signup', { name, email, password });
-
-}
-
-        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-        render();
-        return;
-    }
-}
   if (currentTab === 'feed') { renderFeedPanel(); startFeedPolling(); stopChatPolling(); }
   else { renderChatPanel(); startChatPolling(); stopFeedPolling(); }
 }
@@ -322,17 +263,11 @@ function attachSetupHandlers() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Connecting…';
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
       const testRes = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'getPosts', offset: 0, limit: 1 }),
-        signal: controller.signal,
       });
-      
-      clearTimeout(timeoutId);
       const data = await testRes.json();
       if (data.ok === undefined) throw new Error('Unexpected response from the script.');
       // ok:false with "Unknown action" would mean something is very wrong;
@@ -341,10 +276,7 @@ function attachSetupHandlers() {
       localStorage.setItem(CONFIG_KEY, url);
       render();
     } catch (err) {
-      const msg = err.name === 'AbortError' 
-        ? 'Connection timeout. Check the URL and try again.'
-        : 'Could not connect: ' + err.message + '. Check that the deployment access is set to "Anyone" and that you copied the /exec URL (not /dev).';
-      errorEl.textContent = msg;
+      errorEl.textContent = 'Could not connect: ' + err.message + '. Check that the deployment access is set to "Anyone" and that you copied the /exec URL (not /dev).';
       errorEl.classList.remove('hidden');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Connect';
