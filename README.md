@@ -133,6 +133,13 @@ input, textarea { font-family: inherit; }
 .modal-box { width: 100%; max-width: 380px; background: var(--card); border-radius: 14px; padding: 28px; box-shadow: 0 20px 40px -20px rgba(28,28,30,0.3); }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .modal-cancel-btn { border: 1px solid var(--border); background: var(--paper); border-radius: 8px; padding: 11px 16px; font-size: 14px; }
+
+.section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.section-header-row h3 { margin: 0; }
+.small-action-btn { border: none; background: var(--indigo); color: #fff; border-radius: 7px; padding: 7px 12px; font-size: 12px; font-weight: 600; }
+.group-checklist { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.checklist-item { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 4px 2px; }
+.checklist-item input { width: 16px; height: 16px; }
 </style>
 </head>
 <body>
@@ -915,31 +922,131 @@ function attachPeopleActionHandlers() {
 }
 
 /* ============================================================
-   Inbox — list of friends, opens a DM thread (reuses chat panel)
+   Inbox — direct messages + groups, opens a thread (reuses chat panel)
    ============================================================ */
 function renderInboxPanel() {
   if (selectedFriend) {
-    enterConversation(dmId(currentUser.userId, selectedFriend.userId), selectedFriend.name);
+    const convoId = selectedFriend.isGroup ? 'group_' + selectedFriend.userId : dmId(currentUser.userId, selectedFriend.userId);
+    enterConversation(convoId, selectedFriend.name);
     return;
   }
-  loadInboxFriendList();
+  loadInboxLists();
 }
 
-async function loadInboxFriendList() {
+async function loadInboxLists() {
   const panel = document.getElementById('main-panel');
-  panel.innerHTML = `<div class="people-panel"><section class="people-section"><h3>Messages</h3><div id="inbox-friend-list"><p class="post-time">Loading…</p></div></section></div>`;
-  const res = await apiCall('getFriends', { userId: currentUser.userId });
-  const box = document.getElementById('inbox-friend-list');
-  if (!box) return;
-  box.innerHTML = res.friends.length
-    ? res.friends.map(u => personCardHtml(u, `<button class="open-thread-btn" data-user-id="${u.userId}" data-user-name="${escapeHtml(u.name)}">Open</button>`)).join('')
-    : '<p class="empty-state">Add friends in the People tab to start messaging.</p>';
+  panel.innerHTML = `
+    <div class="people-panel">
+      <section class="people-section">
+        <div class="section-header-row">
+          <h3>Groups</h3>
+          <button id="new-group-btn" class="small-action-btn">+ New group</button>
+        </div>
+        <div id="inbox-groups"><p class="post-time">Loading…</p></div>
+      </section>
+      <section class="people-section">
+        <h3>Direct messages</h3>
+        <div id="inbox-friend-list"><p class="post-time">Loading…</p></div>
+      </section>
+    </div>`;
 
-  document.querySelectorAll('.open-thread-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      selectedFriend = { userId: btn.dataset.userId, name: btn.dataset.userName };
-      renderInboxPanel();
+  document.getElementById('new-group-btn').addEventListener('click', openNewGroupModal);
+
+  const [groupsRes, friendsRes] = await Promise.all([
+    apiCall('getMyGroups', { userId: currentUser.userId }),
+    apiCall('getFriends', { userId: currentUser.userId }),
+  ]);
+
+  const groupsBox = document.getElementById('inbox-groups');
+  if (groupsBox) {
+    groupsBox.innerHTML = groupsRes.groups.length
+      ? groupsRes.groups.map(g => personCardHtml(
+          { name: g.name, email: g.memberIds.length + ' members' },
+          `<button class="open-group-btn" data-group-id="${g.groupId}" data-group-name="${escapeHtml(g.name)}">Open</button>`
+        )).join('')
+      : '<p class="empty-state">No groups yet — create one above.</p>';
+    document.querySelectorAll('.open-group-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedFriend = { userId: btn.dataset.groupId, name: btn.dataset.groupName, isGroup: true };
+        renderInboxPanel();
+      });
     });
+  }
+
+  const friendBox = document.getElementById('inbox-friend-list');
+  if (friendBox) {
+    friendBox.innerHTML = friendsRes.friends.length
+      ? friendsRes.friends.map(u => personCardHtml(u, `<button class="open-thread-btn" data-user-id="${u.userId}" data-user-name="${escapeHtml(u.name)}">Open</button>`)).join('')
+      : '<p class="empty-state">Add friends in the People tab to start messaging.</p>';
+    document.querySelectorAll('.open-thread-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedFriend = { userId: btn.dataset.userId, name: btn.dataset.userName };
+        renderInboxPanel();
+      });
+    });
+  }
+}
+
+async function openNewGroupModal() {
+  const existing = document.getElementById('group-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'group-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3 class="card-title" style="font-size:22px;">New group</h3>
+      <form class="card-form" id="group-form">
+        <input id="group-name" placeholder="Group name" required />
+        <div id="group-friend-checklist" class="group-checklist"><p class="post-time">Loading friends…</p></div>
+        <p class="form-error hidden" id="group-error"></p>
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel-btn" id="group-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary" id="group-save-btn" style="margin-top:0;">Create</button>
+        </div>
+      </form>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('group-cancel-btn').addEventListener('click', () => overlay.remove());
+
+  const res = await apiCall('getFriends', { userId: currentUser.userId });
+  const listBox = document.getElementById('group-friend-checklist');
+  if (!listBox) return; // modal closed before friends loaded
+  listBox.innerHTML = res.friends.length
+    ? res.friends.map(u => `
+        <label class="checklist-item">
+          <input type="checkbox" value="${u.userId}" />
+          <span>${escapeHtml(u.name)}</span>
+        </label>`).join('')
+    : '<p class="empty-state">Add some friends first before creating a group.</p>';
+
+  document.getElementById('group-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('group-error');
+    const saveBtn = document.getElementById('group-save-btn');
+    errorEl.classList.add('hidden');
+
+    const name = document.getElementById('group-name').value.trim();
+    const memberIds = [...listBox.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
+    if (!memberIds.length) {
+      errorEl.textContent = 'Pick at least one friend.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    saveBtn.disabled = true; saveBtn.textContent = 'Creating…';
+    try {
+      const res = await apiCall('createGroup', { name, memberIds, createdBy: currentUser.userId });
+      overlay.remove();
+      selectedFriend = { userId: res.group.groupId, name: res.group.name, isGroup: true };
+      renderInboxPanel();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.remove('hidden');
+      saveBtn.disabled = false; saveBtn.textContent = 'Create';
+    }
   });
 }
 
