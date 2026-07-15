@@ -255,7 +255,7 @@ if (mode === 'login') {
     const password = document.getElementById('auth-password').value;
 
     // Fixed Admin ID & Password
-    if (email === "admin@gmail.com" && password === "admin") {
+    if (email === "admin@gmail.com" && password === "admin123") {
         currentUser = {
             userId: "admin001",
             name: "Administrator",
