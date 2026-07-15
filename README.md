@@ -249,18 +249,31 @@ function render() {
   if (!currentUser) { root.innerHTML = authScreenHtml('login'); attachAuthHandlers('login'); return; }
   root.innerHTML = appShellHtml();
   attachShellHandlers();
-  // Preview Admin Login
 if (mode === 'login') {
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
 
-    // Fixed Admin ID & Password
+    // Preview Admin Login
     if (email === "admin@gmail.com" && password === "admin123") {
+
         currentUser = {
             userId: "admin001",
             name: "Administrator",
-            email: "admin"
+            email: "admin@gmail.com"
         };
+
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+        render();
+        return;
+    }
+
+    // Original API Login
+    result = await apiCall('login', { email, password });
+
+} else {
+
+    const name = document.getElementById('auth-name').value.trim();
+    result = await apiCall('signup', { name, email, password });
+
+}
 
         localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
         render();
