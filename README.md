@@ -140,18 +140,28 @@ const openComments = {}; // postId -> bool
 const commentsCache = {}; // postId -> array
 
 /* ============================================================
-   API helper
+   API helper — FIXED with better error handling
    ============================================================ */
 async function apiCall(action, payload = {}) {
   if (!API_URL) throw new Error('No API URL configured');
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...payload }),
-  });
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.error || 'Request failed');
-  return data;
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...payload }),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw new Error(error.message || 'Failed to connect to the backend');
+  }
 }
 
 function fileToBase64(file) {
@@ -229,7 +239,7 @@ function attachSetupHandlers() {
     try {
       const testRes = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'getPosts', offset: 0, limit: 1 }),
       });
       const data = await testRes.json();
