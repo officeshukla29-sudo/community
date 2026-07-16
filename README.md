@@ -51,7 +51,21 @@ input, textarea { font-family: inherit; }
 .nav-tabs button { background: none; border: none; border-radius: 7px; padding: 6px 14px; font-size: 13px; color: var(--ink-soft); font-weight: 600; }
 .nav-tabs button.active { background: var(--indigo); color: #fff; }
 .nav-user { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--ink-soft); }
-.nav-user span.profile-name-btn { cursor: pointer; font-weight: 600; color: var(--indigo-dark); }
+.avatar-img { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+
+.nav-user span.profile-name-btn { cursor: pointer; font-weight: 600; color: var(--indigo-dark); display: flex; align-items: center; gap: 8px; }
+
+.comment { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.4; }
+.comment > div { padding-top: 2px; }
+
+.mention-dropdown { position: absolute; bottom: 100%; left: 0; margin-bottom: 4px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 20px -8px rgba(28,28,30,0.25); z-index: 50; min-width: 160px; overflow: hidden; }
+.mention-item { padding: 8px 12px; font-size: 13px; cursor: pointer; }
+.mention-item:hover { background: var(--paper); }
+
+.toast-notification { position: fixed; top: 16px; right: 16px; max-width: 300px; background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--indigo); border-radius: 10px; padding: 12px 14px; box-shadow: 0 12px 28px -12px rgba(28,28,30,0.3); z-index: 3000; cursor: pointer; font-size: 13px; animation: toast-in 0.2s ease-out; }
+.toast-notification strong { display: block; margin-bottom: 3px; font-size: 13px; }
+.toast-notification div { color: var(--ink-soft); font-size: 12px; }
+@keyframes toast-in { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .nav-user button { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; font-size: 13px; color: var(--ink); }
 .main { max-width: 560px; margin: 0 auto; padding: 28px 16px 80px; }
 .main-chat { max-width: 640px; padding: 20px 16px; height: calc(100vh - 130px); display: flex; flex-direction: column; }
@@ -287,6 +301,66 @@ function dmId(userIdA, userIdB) {
   return 'dm_' + [userIdA, userIdB].sort().join('_');
 }
 
+function avatarHtml(name, photoURL, size) {
+  size = size || 36;
+  if (photoURL) {
+    return `<img class="avatar-img" src="${photoURL}" style="width:${size}px;height:${size}px;" alt="" />`;
+  }
+  const initial = escapeHtml((name || '?')[0] || '?').toUpperCase();
+  return `<div class="avatar" style="width:${size}px;height:${size}px;">${initial}</div>`;
+}
+
+let cachedFriends = null;
+async function ensureFriendsCache() {
+  if (!cachedFriends) {
+    const res = await apiCall('getFriends', { userId: currentUser.userId });
+    cachedFriends = res.friends;
+  }
+  return cachedFriends;
+}
+
+function extractMentions(text, friends) {
+  const mentioned = [];
+  friends.forEach(f => { if (text.indexOf('@' + f.name) !== -1) mentioned.push(f.userId); });
+  return mentioned;
+}
+
+function attachMentionAutocomplete(inputEl) {
+  let dropdown = null;
+  function removeDropdown() { if (dropdown) { dropdown.remove(); dropdown = null; } }
+
+  inputEl.addEventListener('input', async () => {
+    const val = inputEl.value;
+    const cursor = inputEl.selectionStart;
+    const upToCursor = val.slice(0, cursor);
+    const match = upToCursor.match(/@(\w*)$/);
+    removeDropdown();
+    if (!match) return;
+    const query = match[1].toLowerCase();
+    const friends = await ensureFriendsCache();
+    const matches = friends.filter(f => f.name.toLowerCase().includes(query)).slice(0, 5);
+    if (!matches.length) return;
+
+    dropdown = document.createElement('div');
+    dropdown.className = 'mention-dropdown';
+    dropdown.innerHTML = matches.map(f => `<div class="mention-item" data-name="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>`).join('');
+    inputEl.parentElement.style.position = 'relative';
+    inputEl.parentElement.appendChild(dropdown);
+
+    dropdown.querySelectorAll('.mention-item').forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const name = item.dataset.name;
+        const newVal = val.slice(0, cursor - match[0].length) + '@' + name + ' ' + val.slice(cursor);
+        inputEl.value = newVal;
+        removeDropdown();
+        inputEl.focus();
+      });
+    });
+  });
+  inputEl.addEventListener('blur', () => setTimeout(removeDropdown, 150));
+}
+
 /* ============================================================
    Root render dispatcher
    ============================================================ */
@@ -297,6 +371,7 @@ function render() {
   root.innerHTML = appShellHtml();
   attachShellHandlers();
   startIncomingCallWatcher();
+  startActivityWatcher();
 
   stopFeedPolling();
   stopConversationPolling();
@@ -444,7 +519,10 @@ function appShellHtml() {
         </div>
       </div>
       <div class="nav-user">
-        <span id="profile-open-btn" class="profile-name-btn">${escapeHtml(currentUser.name)}</span>
+        <span id="profile-open-btn" class="profile-name-btn">
+          ${avatarHtml(currentUser.name, currentUser.photoURL, 26)}
+          ${escapeHtml(currentUser.name)}
+        </span>
         <button id="logout-btn">Log out</button>
       </div>
     </nav>
@@ -461,8 +539,9 @@ function attachShellHandlers() {
   document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.removeItem(USER_KEY);
     currentUser = null;
-    stopFeedPolling(); stopConversationPolling(); stopIncomingCallWatcher();
+    stopFeedPolling(); stopConversationPolling(); stopIncomingCallWatcher(); stopActivityWatcher();
     if (activeCall) hangupCall();
+    cachedFriends = null;
     render();
   });
 }
@@ -470,10 +549,13 @@ function attachShellHandlers() {
 /* ============================================================
    Feed
    ============================================================ */
+let latestPostTimestamp = null;
+
 async function loadFirstPage() {
   const res = await apiCall('getPosts', { offset: 0, limit: 10 });
   feedPosts = res.posts;
   feedHasMore = res.hasMore;
+  latestPostTimestamp = feedPosts.length ? feedPosts[0].createdAt : new Date().toISOString();
   renderFeedPanel();
 }
 
@@ -484,10 +566,22 @@ async function loadMorePosts() {
   renderFeedPanel();
 }
 
+async function pollFeedForNewPosts() {
+  if (!latestPostTimestamp) return;
+  try {
+    const res = await apiCall('getPosts', { since: latestPostTimestamp });
+    if (res.posts.length) {
+      feedPosts = res.posts.concat(feedPosts);
+      latestPostTimestamp = res.posts[0].createdAt;
+      renderFeedPanel();
+    }
+  } catch (err) { /* silent — background poll */ }
+}
+
 function startFeedPolling() {
   if (feedInterval) return;
   loadFirstPage();
-  feedInterval = setInterval(loadFirstPage, 15000);
+  feedInterval = setInterval(pollFeedForNewPosts, 15000);
 }
 function stopFeedPolling() { if (feedInterval) { clearInterval(feedInterval); feedInterval = null; } }
 
@@ -498,7 +592,7 @@ function postCardHtml(post) {
   return `
   <article class="post-card" data-post-id="${post.postId}">
     <header class="post-header">
-      <div class="avatar">${escapeHtml((post.authorName || '?')[0] || '?').toUpperCase()}</div>
+      ${avatarHtml(post.authorName, post.authorPhoto)}
       <div>
         <div class="post-author">${escapeHtml(post.authorName)}</div>
         <div class="post-time">${post.createdAt ? new Date(post.createdAt).toLocaleString() : 'just now'}</div>
@@ -511,7 +605,7 @@ function postCardHtml(post) {
       <button class="comment-toggle-btn" data-post-id="${post.postId}">💬 ${post.commentCount ?? comments.length}</button>
     </div>
     <div class="comments ${showComments ? '' : 'hidden'}" data-comments-for="${post.postId}">
-      ${comments.map(c => `<div class="comment"><span class="comment-author">${escapeHtml(c.authorName)}</span> ${escapeHtml(c.text)}</div>`).join('')}
+      ${comments.map(commentHtml).join('')}
       <form class="comment-form" data-post-id="${post.postId}">
         <input placeholder="Write a comment…" />
         <button type="submit">Send</button>
@@ -548,6 +642,8 @@ function attachFeedHandlers() {
     document.getElementById('new-post-filename').textContent = imageInput.files[0] ? imageInput.files[0].name : 'Add photo';
   });
 
+  attachMentionAutocomplete(document.getElementById('new-post-text'));
+
   document.getElementById('new-post-submit').addEventListener('click', async (e) => {
     const btn = e.target;
     const textEl = document.getElementById('new-post-text');
@@ -558,12 +654,16 @@ function attachFeedHandlers() {
     try {
       let imageBase64 = null;
       if (file) imageBase64 = await fileToBase64(file);
-      await apiCall('createPost', {
-        authorId: currentUser.userId, authorName: currentUser.name,
-        text, imageBase64, imageMime: file?.type, imageName: file?.name,
+      const friends = await ensureFriendsCache();
+      const mentions = extractMentions(text, friends);
+      const res = await apiCall('createPost', {
+        authorId: currentUser.userId, authorName: currentUser.name, authorPhoto: currentUser.photoURL || '',
+        text, imageBase64, imageMime: file?.type, imageName: file?.name, mentions,
       });
       textEl.value = ''; imageInput.value = '';
-      await loadFirstPage();
+      feedPosts = [res.post].concat(feedPosts);
+      latestPostTimestamp = res.post.createdAt;
+      renderFeedPanel();
     } catch (err) {
       alert('Failed to post: ' + err.message);
     } finally {
@@ -610,6 +710,7 @@ function attachFeedHandlers() {
   });
 
   document.querySelectorAll('.comment-form').forEach(form => {
+    attachMentionAutocomplete(form.querySelector('input'));
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const postId = form.dataset.postId;
@@ -617,24 +718,33 @@ function attachFeedHandlers() {
       const text = input.value.trim();
       if (!text) return;
       input.value = '';
-      const res = await apiCall('addComment', { postId, authorId: currentUser.userId, authorName: currentUser.name, text });
+      const friends = await ensureFriendsCache();
+      const mentions = extractMentions(text, friends);
+      const res = await apiCall('addComment', { postId, authorId: currentUser.userId, authorName: currentUser.name, authorPhoto: currentUser.photoURL || '', text, mentions });
       commentsCache[postId] = (commentsCache[postId] || []).concat([res.comment]);
       renderCommentsInto(form.parentElement, postId);
     });
   });
 }
 
+function commentHtml(c) {
+  return `<div class="comment">${avatarHtml(c.authorName, c.authorPhoto, 24)}<div><span class="comment-author">${escapeHtml(c.authorName)}</span> ${escapeHtml(c.text)}</div></div>`;
+}
+
 function renderCommentsInto(container, postId) {
   const comments = commentsCache[postId] || [];
   const formHtml = `<form class="comment-form" data-post-id="${postId}"><input placeholder="Write a comment…" /><button type="submit">Send</button></form>`;
-  container.innerHTML = comments.map(c => `<div class="comment"><span class="comment-author">${escapeHtml(c.authorName)}</span> ${escapeHtml(c.text)}</div>`).join('') + formHtml;
+  container.innerHTML = comments.map(commentHtml).join('') + formHtml;
+  const input = container.querySelector('.comment-form input');
+  attachMentionAutocomplete(input);
   container.querySelector('.comment-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const input = e.target.querySelector('input');
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
-    const res = await apiCall('addComment', { postId, authorId: currentUser.userId, authorName: currentUser.name, text });
+    const friends = await ensureFriendsCache();
+    const mentions = extractMentions(text, friends);
+    const res = await apiCall('addComment', { postId, authorId: currentUser.userId, authorName: currentUser.name, authorPhoto: currentUser.photoURL || '', text, mentions });
     commentsCache[postId] = (commentsCache[postId] || []).concat([res.comment]);
     renderCommentsInto(container, postId);
   });
@@ -688,6 +798,7 @@ function chatBubbleHtml(m) {
   else if (m.type === 'image') mediaHtml = `<img src="${m.mediaURL}" alt="" />`;
   return `
   <div class="chat-bubble-row ${mine ? 'mine' : ''}">
+    ${!mine ? avatarHtml(m.senderName, m.senderPhoto, 28) : ''}
     <div class="chat-bubble">
       ${!mine ? `<div class="chat-sender">${escapeHtml(m.senderName)}</div>` : ''}
       ${m.type === 'text' ? `<p>${escapeHtml(m.text)}</p>` : mediaHtml}
@@ -753,13 +864,17 @@ function renderChatPanel() {
 }
 
 function attachChatHandlers() {
+  attachMentionAutocomplete(document.getElementById('chat-text'));
+
   document.getElementById('chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = document.getElementById('chat-text');
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
-    const res = await apiCall('sendMessage', { conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, type: 'text', text });
+    const friends = await ensureFriendsCache();
+    const mentions = extractMentions(text, friends);
+    const res = await apiCall('sendMessage', { conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, senderPhoto: currentUser.photoURL || '', type: 'text', text, mentions });
     conversationMessages.push(res.message);
     conversationLastTimestamp = res.message.createdAt;
     renderChatPanel();
@@ -774,7 +889,7 @@ function attachChatHandlers() {
     try {
       const base64 = await fileToBase64(file);
       const res = await apiCall('sendMessage', {
-        conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name,
+        conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, senderPhoto: currentUser.photoURL || '',
         type, mediaBase64: base64, mediaMime: file.type, mediaName: file.name,
       });
       conversationMessages.push(res.message);
@@ -843,7 +958,7 @@ async function stopRecording() {
   try {
     const base64 = await blobToBase64(blob);
     const res = await apiCall('sendMessage', {
-      conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name,
+      conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, senderPhoto: currentUser.photoURL || '',
       type: kind, mediaBase64: base64, mediaMime: blob.type, mediaName: `${kind}-${Date.now()}.webm`,
     });
     conversationMessages.push(res.message);
@@ -868,7 +983,7 @@ function cancelRecording() {
 function personCardHtml(user, actionHtml) {
   return `
   <div class="person-card">
-    <div class="avatar">${escapeHtml((user.name || '?')[0] || '?').toUpperCase()}</div>
+    ${avatarHtml(user.name, user.photoURL)}
     <div class="person-info">
       <div class="person-name">${escapeHtml(user.name)}</div>
       <div class="person-email">${escapeHtml(user.email)}</div>
@@ -975,6 +1090,7 @@ function attachPeopleActionHandlers() {
   document.querySelectorAll('.accept-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       await apiCall('respondFriendRequest', { friendshipId: btn.dataset.friendshipId, accept: true });
+      cachedFriends = null;
       refreshPeopleData();
     });
   });
@@ -1457,6 +1573,85 @@ async function refreshManageGroupModal() {
 }
 
 /* ============================================================
+   Activity watcher — desktop notification + sound for new
+   messages (DM/group) and @mentions, even outside the active tab
+   ============================================================ */
+let lastActivityCheck = null;
+let activityPollInterval = null;
+
+function startActivityWatcher() {
+  if (activityPollInterval) return;
+  lastActivityCheck = new Date().toISOString(); // don't replay old activity on login
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  activityPollInterval = setInterval(checkNewActivity, 10000);
+}
+
+function stopActivityWatcher() {
+  if (activityPollInterval) { clearInterval(activityPollInterval); activityPollInterval = null; }
+}
+
+async function checkNewActivity() {
+  try {
+    const res = await apiCall('getNewActivity', { userId: currentUser.userId, since: lastActivityCheck });
+    lastActivityCheck = res.checkedAt;
+    res.items.forEach(showActivityNotification);
+  } catch (err) { /* silent — background poll */ }
+}
+
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    o.start(); o.stop(ctx.currentTime + 0.35);
+  } catch (e) { /* audio not available — ignore */ }
+}
+
+function showActivityNotification(item) {
+  playNotificationSound();
+  const title = item.title || 'New activity';
+  const body = (item.body || '').slice(0, 100);
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      const n = new Notification(title, { body });
+      n.onclick = () => { window.focus(); handleActivityClick(item); };
+    } catch (e) { /* ignore */ }
+  }
+  showInAppToast(title, body, item);
+}
+
+function showInAppToast(title, body, item) {
+  const toast = document.createElement('div');
+  toast.className = 'toast-notification';
+  toast.innerHTML = `<strong>${escapeHtml(title)}</strong><div>${escapeHtml(body)}</div>`;
+  toast.addEventListener('click', () => { handleActivityClick(item); toast.remove(); });
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 6000);
+}
+
+function handleActivityClick(item) {
+  if (item.type === 'dm_message' && item.partnerId) {
+    currentTab = 'inbox';
+    selectedFriend = { userId: item.partnerId, name: item.partnerName };
+  } else if (item.type === 'group_message' && item.groupId) {
+    currentTab = 'inbox';
+    selectedFriend = { userId: item.groupId, name: item.groupName, isGroup: true };
+  } else if (item.type === 'mention_post' || item.type === 'mention_comment') {
+    currentTab = 'feed';
+    selectedFriend = null;
+  } else {
+    return;
+  }
+  render();
+}
+
+/* ============================================================
    Profile modal — edit name / bio / photo
    ============================================================ */
 function openProfileModal() {
@@ -1520,6 +1715,21 @@ function openProfileModal() {
     }
   });
 }
+
+/* ============================================================
+   Pause background polling while the tab is hidden — avoids
+   wasted requests and makes things feel snappier when you come back
+   ============================================================ */
+document.addEventListener('visibilitychange', () => {
+  if (!currentUser) return;
+  if (document.hidden) {
+    stopFeedPolling();
+    stopActivityWatcher();
+  } else {
+    startActivityWatcher();
+    if (currentTab === 'feed') startFeedPolling();
+  }
+});
 
 /* ============================================================
    Boot
