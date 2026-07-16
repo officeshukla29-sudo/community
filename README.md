@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Community</title>
+<title>चिल्लाक्स हाउस</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -140,6 +140,24 @@ input, textarea { font-family: inherit; }
 .group-checklist { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 .checklist-item { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 4px 2px; }
 .checklist-item input { width: 16px; height: 16px; }
+
+/* Calls */
+.call-btns { display: flex; gap: 6px; margin-left: auto; }
+.call-btns button { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 9px; font-size: 15px; }
+
+.call-overlay { position: fixed; inset: 0; background: rgba(20,20,22,0.92); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+.call-box { display: flex; flex-direction: column; align-items: center; gap: 14px; color: #fff; text-align: center; }
+.call-avatar { width: 84px; height: 84px; border-radius: 50%; background: var(--sage); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; }
+.call-name { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; }
+.call-status { font-size: 14px; color: #C9C9CC; }
+.call-actions { display: flex; gap: 14px; margin-top: 6px; }
+.call-accept-btn { background: var(--sage); color: #fff; border: none; border-radius: 24px; padding: 12px 28px; font-size: 14px; font-weight: 600; }
+.call-end-btn { background: var(--danger); color: #fff; border: none; border-radius: 24px; padding: 12px 28px; font-size: 14px; font-weight: 600; }
+
+.call-box-video { position: relative; width: 100%; max-width: 600px; height: 80vh; max-height: 640px; }
+.remote-video { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; background: #000; }
+.local-video { position: absolute; bottom: 90px; right: 12px; width: 110px; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #fff; background: #000; }
+.call-controls { position: absolute; bottom: 16px; left: 0; right: 0; display: flex; justify-content: center; }
 </style>
 </head>
 <body>
@@ -169,7 +187,7 @@ function showFatalError(message) {
 }
 
 const CONFIG_KEY = 'nexus_api_url';
-const USER_KEY = 'nexus_community_user';
+const USER_KEY = 'nexus_चिल्लाक्स हाउस_user';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxbI2l7s8erxJlKYHnYL-syBI5v4ZRo1v_CEWhhFlIoqsi8hUWFr9L842AdfIYlaTJ9pA/exec';
 // Always sync to DEFAULT_API_URL — overwrites any stale URL saved from a previous version of this file
 const previousApiUrl = localStorage.getItem(CONFIG_KEY);
@@ -186,10 +204,10 @@ let feedPosts = [];
 let feedHasMore = true;
 let feedInterval = null;
 
-// Generalized conversation state — used for both the community room ("general")
+// Generalized conversation state — used for both the चिल्लाक्स हाउस room ("general")
 // and 1:1 DM threads (conversationId = dm_<sortedUserIds>)
 let activeConversationId = 'general';
-let activeConversationTitle = null; // null = community chat; else the friend's name (DM)
+let activeConversationTitle = null; // null = चिल्लाक्स हाउस chat; else the friend's name (DM)
 let conversationMessages = [];
 let conversationLastTimestamp = null;
 let conversationInterval = null;
@@ -206,7 +224,14 @@ const commentsCache = {}; // postId -> array
 let suggestedPeople = [];
 let friendRequests = [];
 let friendsList = [];
-let selectedFriend = null; // { userId, name } — set when a DM thread is open in the Inbox tab
+let selectedFriend = null; // { userId, name, isGroup? } — set when a thread is open in the Inbox tab
+let activeGroupInfo = null; // { groupId, name, createdBy, members } — populated when a group thread is open
+
+// Calls (WebRTC, signaled via polling the Apps Script sheet)
+const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+let incomingCallWatcherInterval = null;
+let incomingCallOverlayShown = null; // callId currently shown as an incoming-call popup
+let activeCall = null; // { callId, role, type, pc, localStream, candidateSeen, statusInterval, startedAt }
 
 /* ============================================================
    API helper
@@ -271,6 +296,7 @@ function render() {
   if (!currentUser) { root.innerHTML = authScreenHtml('login'); attachAuthHandlers('login'); return; }
   root.innerHTML = appShellHtml();
   attachShellHandlers();
+  startIncomingCallWatcher();
 
   stopFeedPolling();
   stopConversationPolling();
@@ -288,7 +314,7 @@ function setupScreenHtml() {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">Community</h1>
+      <h1 class="card-title">चिल्लाक्स हाउस</h1>
       <p class="card-subtitle">Paste your Apps Script Web app URL to connect this app to your Google Sheet database.</p>
       <form class="card-form" id="setup-form">
         <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec" required />
@@ -347,7 +373,7 @@ function authScreenHtml(mode) {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">Community</h1>
+      <h1 class="card-title">चिल्लाक्स हाउस</h1>
       <p class="card-subtitle">${mode === 'login' ? 'Welcome back.' : 'Create your account.'}</p>
       <form class="card-form" id="auth-form">
         ${mode === 'signup' ? `<input type="text" id="auth-name" placeholder="Full name" required />` : ''}
@@ -409,7 +435,7 @@ function appShellHtml() {
   <div class="app">
     <nav class="navbar">
       <div class="nav-left">
-        <span class="brand">Community</span>
+        <span class="brand">चिल्लाक्स हाउस</span>
         <div class="nav-tabs">
           <button id="tab-feed" class="${currentTab === 'feed' ? 'active' : ''}">Feed</button>
           <button id="tab-chat" class="${currentTab === 'chat' ? 'active' : ''}">Chat</button>
@@ -435,7 +461,8 @@ function attachShellHandlers() {
   document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.removeItem(USER_KEY);
     currentUser = null;
-    stopFeedPolling(); stopConversationPolling();
+    stopFeedPolling(); stopConversationPolling(); stopIncomingCallWatcher();
+    if (activeCall) hangupCall();
     render();
   });
 }
@@ -499,7 +526,7 @@ function renderFeedPanel() {
   panel.innerHTML = `
     <div class="feed">
       <div class="create-post">
-        <textarea id="new-post-text" placeholder="Share something with the community…" rows="3"></textarea>
+        <textarea id="new-post-text" placeholder="Share something with the चिल्लाक्स हाउस…" rows="3"></textarea>
         <div class="create-post-row">
           <label class="file-btn">
             <span id="new-post-filename">Add photo</span>
@@ -614,7 +641,7 @@ function renderCommentsInto(container, postId) {
 }
 
 /* ============================================================
-   Chat (generalized — powers both the community room and DMs)
+   Chat (generalized — powers both the चिल्लाक्स हाउस room and DMs)
    ============================================================ */
 async function loadConversationInitial() {
   const res = await apiCall('getMessages', { conversationId: activeConversationId });
@@ -649,6 +676,7 @@ function stopConversationPolling() { if (conversationInterval) { clearInterval(c
 function exitToInboxList() {
   stopConversationPolling();
   selectedFriend = null;
+  activeGroupInfo = null;
   renderInboxPanel();
 }
 
@@ -667,16 +695,33 @@ function chatBubbleHtml(m) {
   </div>`;
 }
 
+function conversationKind(conversationId) {
+  if (conversationId === 'general') return 'चिल्लाक्स हाउस';
+  if (conversationId.startsWith('dm_')) return 'dm';
+  if (conversationId.startsWith('group_')) return 'group';
+  return 'unknown';
+}
+
 function renderChatPanel() {
   const panel = document.getElementById('main-panel');
   if (!panel) return;
   const isDm = !!activeConversationTitle;
+  const kind = conversationKind(activeConversationId);
+  const isDirectDm = kind === 'dm';
+  const isGroupConvo = kind === 'group';
+  const canManageGroup = isGroupConvo && activeGroupInfo && activeGroupInfo.createdBy === currentUser.userId;
   const headerHtml = isDm ? `
     <div class="chat-thread-header">
       <button id="chat-back-btn">← Back</button>
       <span>${escapeHtml(activeConversationTitle)}</span>
+      ${isDirectDm ? `
+        <div class="call-btns">
+          <button id="audio-call-btn" title="Audio call">📞</button>
+          <button id="video-call-btn" title="Video call">🎥</button>
+        </div>` : ''}
+      ${canManageGroup ? `<button id="manage-group-btn" class="small-action-btn" style="margin-left:auto;">Manage</button>` : ''}
     </div>` : '';
-  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the community…';
+  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the चिल्लाक्स हाउस…';
 
   panel.innerHTML = `
     <div class="chat">
@@ -686,6 +731,8 @@ function renderChatPanel() {
       </div>
       <div id="recording-area"></div>
       <form class="chat-input-row" id="chat-form">
+        <button type="button" id="attach-btn" title="Send photo/video">📎</button>
+        <input type="file" id="attach-input" accept="image/*,video/*" hidden />
         <button type="button" id="rec-audio-btn" title="Record audio">🎤</button>
         <button type="button" id="rec-video-btn" title="Record video">🎥</button>
         <input id="chat-text" placeholder="${placeholder}" />
@@ -695,6 +742,13 @@ function renderChatPanel() {
   const msgBox = document.getElementById('chat-messages');
   msgBox.scrollTop = msgBox.scrollHeight;
   if (isDm) document.getElementById('chat-back-btn').addEventListener('click', exitToInboxList);
+  if (isDirectDm) {
+    document.getElementById('audio-call-btn').addEventListener('click', () => initiateCall(selectedFriend.userId, selectedFriend.name, 'audio'));
+    document.getElementById('video-call-btn').addEventListener('click', () => initiateCall(selectedFriend.userId, selectedFriend.name, 'video'));
+  }
+  if (canManageGroup) {
+    document.getElementById('manage-group-btn').addEventListener('click', openManageGroupModal);
+  }
   attachChatHandlers();
 }
 
@@ -709,6 +763,26 @@ function attachChatHandlers() {
     conversationMessages.push(res.message);
     conversationLastTimestamp = res.message.createdAt;
     renderChatPanel();
+  });
+
+  document.getElementById('attach-btn').addEventListener('click', () => document.getElementById('attach-input').click());
+  document.getElementById('attach-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const type = file.type.startsWith('video') ? 'video' : 'image';
+    try {
+      const base64 = await fileToBase64(file);
+      const res = await apiCall('sendMessage', {
+        conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name,
+        type, mediaBase64: base64, mediaMime: file.type, mediaName: file.name,
+      });
+      conversationMessages.push(res.message);
+      conversationLastTimestamp = res.message.createdAt;
+      renderChatPanel();
+    } catch (err) {
+      alert('Failed to send: ' + err.message);
+    }
   });
 
   document.getElementById('rec-audio-btn').addEventListener('click', () => startRecording('audio'));
@@ -927,10 +1001,25 @@ function attachPeopleActionHandlers() {
 function renderInboxPanel() {
   if (selectedFriend) {
     const convoId = selectedFriend.isGroup ? 'group_' + selectedFriend.userId : dmId(currentUser.userId, selectedFriend.userId);
-    enterConversation(convoId, selectedFriend.name);
+    if (selectedFriend.isGroup) {
+      loadGroupInfoThenEnter(convoId, selectedFriend);
+    } else {
+      activeGroupInfo = null;
+      enterConversation(convoId, selectedFriend.name);
+    }
     return;
   }
   loadInboxLists();
+}
+
+async function loadGroupInfoThenEnter(convoId, friendLike) {
+  try {
+    const res = await apiCall('getGroupDetails', { groupId: friendLike.userId });
+    activeGroupInfo = res.group;
+  } catch (err) {
+    activeGroupInfo = null;
+  }
+  enterConversation(convoId, friendLike.name);
 }
 
 async function loadInboxLists() {
@@ -1048,6 +1137,323 @@ async function openNewGroupModal() {
       saveBtn.disabled = false; saveBtn.textContent = 'Create';
     }
   });
+}
+
+/* ============================================================
+   Calls — WebRTC audio/video calling for DMs, signaled via
+   polling the Apps Script sheet (media itself flows peer-to-peer)
+   ============================================================ */
+function startIncomingCallWatcher() {
+  if (incomingCallWatcherInterval) return;
+  incomingCallWatcherInterval = setInterval(checkForIncomingCall, 4000);
+}
+
+function stopIncomingCallWatcher() {
+  if (incomingCallWatcherInterval) { clearInterval(incomingCallWatcherInterval); incomingCallWatcherInterval = null; }
+}
+
+async function checkForIncomingCall() {
+  if (activeCall || incomingCallOverlayShown) return; // already busy with a call
+  try {
+    const res = await apiCall('getIncomingCall', { userId: currentUser.userId });
+    if (res.call) showIncomingCallOverlay(res.call);
+  } catch (err) { /* silent — this is a background poll */ }
+}
+
+function showCallOverlay(html) {
+  let overlay = document.getElementById('call-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'call-overlay';
+    overlay.className = 'call-overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = html;
+  return overlay;
+}
+
+function hideCallOverlay() {
+  const overlay = document.getElementById('call-overlay');
+  if (overlay) overlay.remove();
+}
+
+function showIncomingCallOverlay(call) {
+  incomingCallOverlayShown = call.callId;
+  const initial = escapeHtml((call.callerName || '?')[0] || '?').toUpperCase();
+  showCallOverlay(`
+    <div class="call-box">
+      <div class="call-avatar">${initial}</div>
+      <div class="call-name">${escapeHtml(call.callerName)}</div>
+      <div class="call-status">Incoming ${call.type} call…</div>
+      <div class="call-actions">
+        <button id="call-accept-btn" class="call-accept-btn">Accept</button>
+        <button id="call-decline-btn" class="call-end-btn">Decline</button>
+      </div>
+    </div>`);
+  document.getElementById('call-accept-btn').addEventListener('click', () => answerIncomingCall(call));
+  document.getElementById('call-decline-btn').addEventListener('click', () => declineIncomingCall(call));
+}
+
+async function declineIncomingCall(call) {
+  incomingCallOverlayShown = null;
+  hideCallOverlay();
+  try { await apiCall('rejectCall', { callId: call.callId }); } catch (err) { /* ignore */ }
+}
+
+async function initiateCall(calleeId, calleeName, type) {
+  if (activeCall) { alert('Already in a call.'); return; }
+  let localStream;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+  } catch (err) {
+    alert('Could not access ' + (type === 'video' ? 'camera/microphone' : 'microphone') + ': ' + err.message);
+    return;
+  }
+
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+  activeCall = { callId: null, role: 'caller', type, pc, localStream, remoteStream: null, seenCandidates: 0, statusInterval: null, startedAt: null };
+
+  pc.ontrack = (e) => { activeCall.remoteStream = e.streams[0]; attachRemoteStreamIfReady(); };
+  pc.onicecandidate = (e) => {
+    if (e.candidate && activeCall && activeCall.callId) {
+      apiCall('addIceCandidate', { callId: activeCall.callId, role: 'caller', candidate: e.candidate.toJSON() }).catch(() => {});
+    }
+  };
+
+  renderOutgoingCallUI(calleeName, type);
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  try {
+    const res = await apiCall('startCall', {
+      conversationId: dmId(currentUser.userId, calleeId),
+      callerId: currentUser.userId, callerName: currentUser.name,
+      calleeId, calleeName, type, offerSDP: offer,
+    });
+    activeCall.callId = res.callId;
+  } catch (err) {
+    alert('Could not start call: ' + err.message);
+    hangupCall();
+    return;
+  }
+
+  activeCall.statusInterval = setInterval(() => pollOutgoingCall(calleeName, type), 2000);
+}
+
+async function pollOutgoingCall(calleeName, type) {
+  if (!activeCall || !activeCall.callId) return;
+  const res = await apiCall('getCall', { callId: activeCall.callId });
+  const call = res.call;
+  if (!call || !activeCall) return;
+
+  if (call.status === 'accepted' && !activeCall.pc.currentRemoteDescription) {
+    await activeCall.pc.setRemoteDescription(new RTCSessionDescription(call.answerSDP));
+    activeCall.startedAt = Date.now();
+    renderActiveCallUI(calleeName, type);
+  }
+  if (call.status === 'rejected') { showCallEndedMessage(calleeName + ' declined the call.'); return; }
+  if (call.status === 'ended') { showCallEndedMessage('Call ended.'); return; }
+
+  // add any new candidates from the callee side
+  const newOnes = call.calleeCandidates.slice(activeCall.seenCandidates);
+  for (const c of newOnes) { try { await activeCall.pc.addIceCandidate(c); } catch (e) {} }
+  activeCall.seenCandidates = call.calleeCandidates.length;
+}
+
+async function answerIncomingCall(call) {
+  incomingCallOverlayShown = null;
+  let localStream;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.type === 'video' });
+  } catch (err) {
+    alert('Could not access ' + (call.type === 'video' ? 'camera/microphone' : 'microphone') + ': ' + err.message);
+    try { await apiCall('rejectCall', { callId: call.callId }); } catch (e) {}
+    hideCallOverlay();
+    return;
+  }
+
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+  activeCall = { callId: call.callId, role: 'callee', type: call.type, pc, localStream, remoteStream: null, seenCandidates: 0, statusInterval: null, startedAt: Date.now() };
+
+  pc.ontrack = (e) => { activeCall.remoteStream = e.streams[0]; attachRemoteStreamIfReady(); };
+  pc.onicecandidate = (e) => {
+    if (e.candidate && activeCall) {
+      apiCall('addIceCandidate', { callId: call.callId, role: 'callee', candidate: e.candidate.toJSON() }).catch(() => {});
+    }
+  };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(call.offerSDP));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await apiCall('answerCall', { callId: call.callId, answerSDP: answer });
+
+  renderActiveCallUI(call.callerName, call.type);
+  activeCall.statusInterval = setInterval(() => pollActiveCallForHangupAndCandidates(call.callerName), 2000);
+}
+
+async function pollActiveCallForHangupAndCandidates() {
+  if (!activeCall || !activeCall.callId) return;
+  const res = await apiCall('getCall', { callId: activeCall.callId });
+  const call = res.call;
+  if (!call || !activeCall) return;
+  if (call.status === 'ended') { showCallEndedMessage('Call ended.'); return; }
+
+  const newOnes = call.callerCandidates.slice(activeCall.seenCandidates);
+  for (const c of newOnes) { try { await activeCall.pc.addIceCandidate(c); } catch (e) {} }
+  activeCall.seenCandidates = call.callerCandidates.length;
+}
+
+function attachRemoteStreamIfReady() {
+  if (!activeCall || !activeCall.remoteStream) return;
+  const remoteVideo = document.getElementById('remote-video');
+  const remoteAudio = document.getElementById('remote-audio');
+  if (remoteVideo) remoteVideo.srcObject = activeCall.remoteStream;
+  if (remoteAudio) remoteAudio.srcObject = activeCall.remoteStream;
+}
+
+function renderOutgoingCallUI(name, type) {
+  const initial = escapeHtml((name || '?')[0] || '?').toUpperCase();
+  showCallOverlay(`
+    <div class="call-box">
+      <div class="call-avatar">${initial}</div>
+      <div class="call-name">${escapeHtml(name)}</div>
+      <div class="call-status">Calling…</div>
+      <button id="call-cancel-btn" class="call-end-btn">End</button>
+    </div>`);
+  document.getElementById('call-cancel-btn').addEventListener('click', hangupCall);
+}
+
+function renderActiveCallUI(name, type) {
+  if (type === 'video') {
+    showCallOverlay(`
+      <div class="call-box call-box-video">
+        <video id="remote-video" autoplay playsinline class="remote-video"></video>
+        <video id="local-video" autoplay playsinline muted class="local-video"></video>
+        <div class="call-controls">
+          <button id="call-hangup-btn" class="call-end-btn">End call</button>
+        </div>
+      </div>`);
+    document.getElementById('local-video').srcObject = activeCall.localStream;
+  } else {
+    const initial = escapeHtml((name || '?')[0] || '?').toUpperCase();
+    showCallOverlay(`
+      <div class="call-box">
+        <audio id="remote-audio" autoplay></audio>
+        <div class="call-avatar">${initial}</div>
+        <div class="call-name">${escapeHtml(name)}</div>
+        <div class="call-status">Connected</div>
+        <button id="call-hangup-btn" class="call-end-btn">End call</button>
+      </div>`);
+  }
+  document.getElementById('call-hangup-btn').addEventListener('click', hangupCall);
+  attachRemoteStreamIfReady();
+}
+
+function showCallEndedMessage(message) {
+  const box = document.querySelector('.call-box');
+  if (box) {
+    box.innerHTML = `<div class="call-status">${escapeHtml(message)}</div>`;
+  }
+  cleanupCall();
+  setTimeout(hideCallOverlay, 1800);
+}
+
+function hangupCall() {
+  if (activeCall && activeCall.callId) {
+    apiCall('endCall', { callId: activeCall.callId }).catch(() => {});
+  }
+  cleanupCall();
+  hideCallOverlay();
+}
+
+function cleanupCall() {
+  if (activeCall) {
+    if (activeCall.statusInterval) clearInterval(activeCall.statusInterval);
+    if (activeCall.pc) activeCall.pc.close();
+    if (activeCall.localStream) activeCall.localStream.getTracks().forEach(t => t.stop());
+  }
+  activeCall = null;
+}
+
+async function openManageGroupModal() {
+  const existing = document.getElementById('manage-group-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'manage-group-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3 class="card-title" style="font-size:22px;">Manage "${escapeHtml(activeGroupInfo.name)}"</h3>
+      <section class="people-section">
+        <h3>Members</h3>
+        <div id="manage-current-members"><p class="post-time">Loading…</p></div>
+      </section>
+      <section class="people-section">
+        <h3>Add friends</h3>
+        <div id="manage-addable-friends"><p class="post-time">Loading…</p></div>
+      </section>
+      <div class="modal-actions">
+        <button type="button" class="modal-cancel-btn" id="manage-close-btn">Close</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('manage-close-btn').addEventListener('click', () => overlay.remove());
+
+  await refreshManageGroupModal();
+}
+
+async function refreshManageGroupModal() {
+  const overlay = document.getElementById('manage-group-overlay');
+  if (!overlay) return;
+
+  const res = await apiCall('getGroupDetails', { groupId: activeGroupInfo.groupId });
+  activeGroupInfo = res.group;
+
+  const membersBox = document.getElementById('manage-current-members');
+  if (membersBox) {
+    membersBox.innerHTML = activeGroupInfo.members.map(m => {
+      const isCreator = m.userId === activeGroupInfo.createdBy;
+      const action = isCreator
+        ? `<span class="person-status">Creator</span>`
+        : `<button class="remove-member-btn" data-user-id="${m.userId}">Remove</button>`;
+      return personCardHtml(m, action);
+    }).join('');
+    membersBox.querySelectorAll('.remove-member-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.textContent = 'Removing…';
+        try {
+          await apiCall('removeGroupMember', { groupId: activeGroupInfo.groupId, requesterId: currentUser.userId, userId: btn.dataset.userId });
+          await refreshManageGroupModal();
+        } catch (err) { alert(err.message); }
+      });
+    });
+  }
+
+  const friendsRes = await apiCall('getFriends', { userId: currentUser.userId });
+  const addableBox = document.getElementById('manage-addable-friends');
+  if (addableBox) {
+    const memberIds = activeGroupInfo.memberIds;
+    const addable = friendsRes.friends.filter(f => memberIds.indexOf(f.userId) === -1);
+    addableBox.innerHTML = addable.length
+      ? addable.map(f => personCardHtml(f, `<button class="add-member-btn" data-user-id="${f.userId}">Add</button>`)).join('')
+      : '<p class="empty-state">All your friends are already in this group.</p>';
+    addableBox.querySelectorAll('.add-member-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.textContent = 'Adding…';
+        try {
+          await apiCall('addGroupMember', { groupId: activeGroupInfo.groupId, requesterId: currentUser.userId, userId: btn.dataset.userId });
+          await refreshManageGroupModal();
+        } catch (err) { alert(err.message); }
+      });
+    });
+  }
 }
 
 /* ============================================================
