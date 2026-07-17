@@ -69,6 +69,33 @@ input, textarea { font-family: inherit; }
 .nav-user button { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; font-size: 13px; color: var(--ink); }
 .main { max-width: 560px; margin: 0 auto; padding: 28px 16px 80px; }
 .main-chat { max-width: 640px; padding: 20px 16px; height: calc(100vh - 130px); display: flex; flex-direction: column; }
+.main-reels { max-width: 480px; padding: 0; height: calc(100vh - 61px); }
+
+.reels-container { height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; background: #000; position: relative; }
+.upload-reel-btn { position: sticky; top: 12px; left: 12px; z-index: 5; background: var(--indigo); color: #fff; border: none; border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 600; margin: 12px; }
+.reel-card { scroll-snap-align: start; height: calc(100vh - 61px); position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
+.reel-video { width: 100%; height: 100%; object-fit: contain; }
+.reel-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); color: #fff; display: flex; flex-direction: column; gap: 8px; }
+.reel-author { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.reel-caption { font-size: 13px; color: rgba(255,255,255,0.9); }
+.reel-like-btn { align-self: flex-start; background: rgba(255,255,255,0.15); border: none; border-radius: 20px; padding: 6px 14px; color: #fff; font-size: 13px; }
+.reel-like-btn.active { background: var(--danger); }
+.load-more-reel-btn { display: block; margin: 16px auto; background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; }
+
+/* Polls / quizzes */
+.poll-bubble { min-width: 220px; }
+.poll-question { font-weight: 600; font-size: 14px; margin: 4px 0 8px; }
+.poll-options { display: flex; flex-direction: column; gap: 6px; }
+.poll-option { position: relative; overflow: hidden; text-align: left; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; cursor: pointer; }
+.poll-option:disabled { cursor: default; }
+.poll-option-label { position: relative; z-index: 1; }
+.poll-option-bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(61,75,140,0.15); z-index: 0; }
+.poll-option.mine .poll-option-bar { background: rgba(61,75,140,0.3); }
+.poll-option.correct { border-color: #4CAF50; }
+.poll-option.correct .poll-option-bar { background: rgba(76,175,80,0.25); }
+.poll-option.incorrect { border-color: var(--danger); }
+.poll-option-pct { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--ink-soft); z-index: 1; }
+.poll-meta { font-size: 11px; color: var(--ink-soft); margin-top: 6px; }
 
 /* Feed */
 .feed { display: flex; flex-direction: column; gap: 16px; }
@@ -131,6 +158,55 @@ input, textarea { font-family: inherit; }
 .emoji-option:hover { background: var(--paper); }
 .emoji-btn { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px; font-size: 14px; }
 
+/* Notification bell */
+.bell-btn { position: relative; background: none; border: none; font-size: 18px; padding: 4px; }
+.bell-badge { position: absolute; top: -2px; right: -4px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 1px 5px; line-height: 1.3; }
+.bell-dropdown { position: absolute; top: 100%; right: 0; margin-top: 8px; width: 280px; max-height: 360px; overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 28px -12px rgba(28,28,30,0.3); z-index: 200; }
+.bell-item { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: pointer; }
+.bell-item:hover { background: var(--paper); }
+.bell-item strong { display: block; font-size: 13px; }
+.bell-item div { color: var(--ink-soft); font-size: 12px; margin-top: 2px; }
+
+/* Online status dot */
+.avatar-wrap { position: relative; flex-shrink: 0; }
+.online-dot { position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-radius: 50%; background: #B8B8B8; border: 2px solid var(--card); }
+.online-dot.online { background: #4CAF50; }
+
+/* Typing indicator */
+.typing-indicator { font-size: 12px; color: var(--ink-soft); padding: 0 16px; min-height: 18px; font-style: italic; }
+.typing-indicator:empty { min-height: 0; }
+
+/* Feed toggle + saved/report */
+.feed-toggle { display: flex; gap: 6px; }
+.feed-toggle-btn { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.feed-toggle-btn.active { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+.save-post-btn { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; font-size: 13px; color: var(--ink-soft); }
+.save-post-btn.active { color: var(--indigo); border-color: var(--indigo); font-weight: 600; }
+.report-post-btn { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; font-size: 12px; color: var(--ink-soft); }
+.block-user-btn { background: none; border: none; font-size: 14px; padding: 2px 4px; }
+
+/* Stories */
+.stories-bar { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 8px; }
+.story-circle { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 64px; position: relative; }
+.story-circle .avatar-img, .story-circle .avatar { border: 2px solid var(--indigo); padding: 2px; }
+.story-circle.add-story { position: relative; }
+.story-plus { position: absolute; top: 40px; left: 40px; background: var(--indigo); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; border: 2px solid var(--card); }
+.story-label { font-size: 11px; color: var(--ink-soft); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64px; }
+
+.story-viewer-overlay { position: fixed; inset: 0; background: #000; z-index: 2500; display: flex; flex-direction: column; }
+.story-viewer-header { display: flex; align-items: center; gap: 10px; padding: 12px; color: #fff; position: relative; z-index: 2; }
+.story-progress { position: absolute; top: 6px; left: 12px; right: 12px; display: flex; gap: 4px; }
+.story-progress span { flex: 1; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; }
+.story-progress span.filled { background: #fff; }
+.story-viewer-author { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex: 1; font-size: 13px; font-weight: 600; }
+.story-viewer-header button { background: none; border: none; color: #fff; font-size: 18px; margin-top: 10px; }
+.story-viewer-body { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.story-viewer-body img, .story-viewer-body video { max-width: 100%; max-height: 100%; object-fit: contain; }
+.story-viewer-nav { position: absolute; top: 0; bottom: 0; left: 0; right: 0; display: flex; }
+.story-viewer-nav button { flex: 1; background: none; border: none; color: transparent; font-size: 0; }
+.story-viewer-nav #story-prev-btn { cursor: w-resize; }
+.story-viewer-nav #story-next-btn { cursor: e-resize; }
+
 /* Chat */
 .chat { display: flex; flex-direction: column; flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
@@ -153,6 +229,41 @@ input, textarea { font-family: inherit; }
 .recording-controls button { border: 1px solid var(--border); background: var(--card); border-radius: 7px; padding: 8px 16px; font-size: 13px; }
 
 .hidden { display: none !important; }
+
+/* Splash screen */
+#splash-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: radial-gradient(circle at 30% 20%, #4A5CA8 0%, var(--indigo-dark) 55%, #1C2340 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+#splash-screen.splash-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.splash-globe { width: 120px; height: 120px; perspective: 600px; }
+.globe-sphere {
+  width: 100%; height: 100%; border-radius: 50%; position: relative;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.25), rgba(255,255,255,0.02) 60%), rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(255,255,255,0.5);
+  box-shadow: 0 0 40px rgba(255,255,255,0.15), inset 0 0 30px rgba(255,255,255,0.1);
+  animation: globe-spin 3.2s linear infinite;
+  transform-style: preserve-3d;
+}
+.globe-line { position: absolute; border: 1px solid rgba(255,255,255,0.45); border-radius: 50%; }
+.globe-lat { left: 0; right: 0; }
+.globe-lat-1 { top: 20%; height: 60%; transform: scaleY(0.35); }
+.globe-lat-2 { top: 0; height: 100%; transform: scaleY(1); }
+.globe-lat-3 { top: 35%; height: 30%; transform: scaleY(0.2); }
+.globe-lon { top: 0; bottom: 0; left: 50%; width: 100%; margin-left: -50%; }
+.globe-lon-1 { transform: rotateY(0deg); border-radius: 50% / 50%; width: 60%; margin-left: -30%; }
+.globe-lon-2 { transform: rotateY(90deg); }
+
+@keyframes globe-spin {
+  from { transform: rotateY(0deg) rotateX(8deg); }
+  to { transform: rotateY(360deg) rotateX(8deg); }
+}
+
+.splash-brand { font-family: 'Fraunces', serif; font-weight: 700; font-size: 28px; color: #fff; letter-spacing: 0.5px; }
+.splash-tagline { font-size: 14px; color: rgba(255,255,255,0.75); margin-top: -14px; }
 
 /* People / friends / inbox */
 .people-panel { display: flex; flex-direction: column; gap: 20px; }
@@ -209,6 +320,19 @@ input, textarea { font-family: inherit; }
 </head>
 <body>
 
+<div id="splash-screen">
+  <div class="splash-globe">
+    <div class="globe-sphere">
+      <div class="globe-line globe-lat globe-lat-1"></div>
+      <div class="globe-line globe-lat globe-lat-2"></div>
+      <div class="globe-line globe-lat globe-lat-3"></div>
+      <div class="globe-line globe-lon globe-lon-1"></div>
+      <div class="globe-line globe-lon globe-lon-2"></div>
+    </div>
+  </div>
+  <div class="splash-brand">चिल्लाक्स हाउस</div>
+  <div class="splash-tagline">Connect everyone, everywhere.</div>
+</div>
 <div id="root"></div>
 
 <script>
@@ -273,6 +397,16 @@ let friendRequests = [];
 let friendsList = [];
 let selectedFriend = null; // { userId, name, isGroup? } — set when a thread is open in the Inbox tab
 let activeGroupInfo = null; // { groupId, name, createdBy, members } — populated when a group thread is open
+let showingSaved = false; // Feed tab: showing saved posts instead of the normal feed
+let storyGroups = []; // active (non-expired) stories, grouped by author
+let storyViewer = null; // { groupIndex, storyIndex } — active story being viewed, or null
+let reelsList = [];
+let reelsHasMore = true;
+let onlineStatusMap = {}; // userId -> boolean, refreshed periodically for visible people
+let presenceHeartbeatInterval = null;
+let notificationHistory = []; // rolling log of activity items, for the bell dropdown
+let unreadNotificationCount = 0;
+let bellDropdownOpen = false;
 
 // Calls (WebRTC, signaled via polling the Apps Script sheet)
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
@@ -441,11 +575,13 @@ function render() {
   attachShellHandlers();
   startIncomingCallWatcher();
   startActivityWatcher();
+  startPresenceHeartbeat();
 
   stopFeedPolling();
   stopConversationPolling();
 
   if (currentTab === 'feed') { renderFeedPanel(); startFeedPolling(); }
+  else if (currentTab === 'reels') { renderReelsPanel(); }
   else if (currentTab === 'chat') { enterConversation('general', null); }
   else if (currentTab === 'people') { renderPeoplePanel(); }
   else if (currentTab === 'inbox') { renderInboxPanel(); }
@@ -582,12 +718,14 @@ function appShellHtml() {
         <span class="brand">चिल्लाक्स हाउस</span>
         <div class="nav-tabs">
           <button id="tab-feed" class="${currentTab === 'feed' ? 'active' : ''}">Feed</button>
+          <button id="tab-reels" class="${currentTab === 'reels' ? 'active' : ''}">Reels</button>
           <button id="tab-chat" class="${currentTab === 'chat' ? 'active' : ''}">Chat</button>
           <button id="tab-people" class="${currentTab === 'people' ? 'active' : ''}">People</button>
           <button id="tab-inbox" class="${currentTab === 'inbox' ? 'active' : ''}">Inbox</button>
         </div>
       </div>
       <div class="nav-user">
+        <button id="bell-btn" class="bell-btn" title="Notifications">🔔${unreadNotificationCount > 0 ? `<span class="bell-badge">${unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>` : ''}</button>
         <span id="profile-open-btn" class="profile-name-btn">
           ${avatarHtml(currentUser.name, currentUser.photoURL, 26)}
           ${escapeHtml(currentUser.name)}
@@ -595,22 +733,25 @@ function appShellHtml() {
         <button id="logout-btn">Log out</button>
       </div>
     </nav>
-    <main class="main ${currentTab === 'chat' || currentTab === 'inbox' ? 'main-chat' : ''}" id="main-panel"></main>
+    <main class="main ${currentTab === 'chat' || currentTab === 'inbox' ? 'main-chat' : ''} ${currentTab === 'reels' ? 'main-reels' : ''}" id="main-panel"></main>
   </div>`;
 }
 
 function attachShellHandlers() {
   document.getElementById('tab-feed').addEventListener('click', () => { currentTab = 'feed'; render(); });
+  document.getElementById('tab-reels').addEventListener('click', () => { currentTab = 'reels'; render(); });
   document.getElementById('tab-chat').addEventListener('click', () => { currentTab = 'chat'; render(); });
   document.getElementById('tab-people').addEventListener('click', () => { currentTab = 'people'; render(); });
   document.getElementById('tab-inbox').addEventListener('click', () => { currentTab = 'inbox'; render(); });
   document.getElementById('profile-open-btn').addEventListener('click', openProfileModal);
+  document.getElementById('bell-btn').addEventListener('click', toggleBellDropdown);
   document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.removeItem(USER_KEY);
     currentUser = null;
-    stopFeedPolling(); stopConversationPolling(); stopIncomingCallWatcher(); stopActivityWatcher();
+    stopFeedPolling(); stopConversationPolling(); stopIncomingCallWatcher(); stopActivityWatcher(); stopPresenceHeartbeat();
     if (activeCall) hangupCall();
     cachedFriends = null;
+    notificationHistory = []; unreadNotificationCount = 0;
     render();
   });
 }
@@ -626,6 +767,7 @@ async function loadFirstPage() {
   feedHasMore = res.hasMore;
   latestPostTimestamp = feedPosts.length ? feedPosts[0].createdAt : new Date().toISOString();
   renderFeedPanel();
+  loadStories();
 }
 
 async function loadMorePosts() {
@@ -636,7 +778,7 @@ async function loadMorePosts() {
 }
 
 async function pollFeedForNewPosts() {
-  if (!latestPostTimestamp) return;
+  if (!latestPostTimestamp || showingSaved) return;
   try {
     const res = await apiCall('getPosts', { since: latestPostTimestamp, userId: currentUser.userId });
     if (res.posts.length) {
@@ -686,6 +828,8 @@ function postCardHtml(post) {
     <div class="post-actions">
       <button class="comment-toggle-btn" data-post-id="${post.postId}">💬 ${post.commentCount ?? comments.length}</button>
       <button class="share-post-btn" data-post-id="${post.postId}">↗ Share</button>
+      <button class="save-post-btn ${post.saved ? 'active' : ''}" data-post-id="${post.postId}">${post.saved ? '🔖 Saved' : '🔖 Save'}</button>
+      ${!isMine ? `<button class="report-post-btn" data-post-id="${post.postId}">⚑ Report</button>` : ''}
     </div>
     <div class="comments ${showComments ? '' : 'hidden'}" data-comments-for="${post.postId}">
       ${comments.map(commentHtml).join('')}
@@ -703,6 +847,12 @@ function renderFeedPanel() {
   if (!panel) return;
   panel.innerHTML = `
     <div class="feed">
+      <div class="stories-bar" id="stories-bar">${storiesBarHtml()}</div>
+      <div class="feed-toggle">
+        <button class="feed-toggle-btn ${!showingSaved ? 'active' : ''}" id="show-all-btn">All</button>
+        <button class="feed-toggle-btn ${showingSaved ? 'active' : ''}" id="show-saved-btn">🔖 Saved</button>
+      </div>
+      ${showingSaved ? '' : `
       <div class="create-post">
         <textarea id="new-post-text" placeholder="Share something with the चिल्लाक्स हाउस…" rows="3"></textarea>
         <div class="create-post-row">
@@ -712,48 +862,252 @@ function renderFeedPanel() {
           </label>
           <button type="button" id="new-post-submit">Post</button>
         </div>
-      </div>
-      ${feedPosts.length === 0 ? '<p class="empty-state">Nothing here yet — be the first to post.</p>' : ''}
+      </div>`}
+      ${feedPosts.length === 0 ? `<p class="empty-state">${showingSaved ? 'No saved posts yet.' : 'Nothing here yet — be the first to post.'}</p>` : ''}
       ${feedPosts.map(postCardHtml).join('')}
-      ${feedHasMore ? '<button class="load-more" id="load-more-btn">Load more</button>' : ''}
+      ${!showingSaved && feedHasMore ? '<button class="load-more" id="load-more-btn">Load more</button>' : ''}
     </div>`;
   attachFeedHandlers();
 }
 
-function attachFeedHandlers() {
-  const imageInput = document.getElementById('new-post-image');
-  imageInput.addEventListener('change', () => {
-    document.getElementById('new-post-filename').textContent = imageInput.files[0] ? imageInput.files[0].name : 'Add photo';
+/* ============================================================
+   Reels — vertical video feed
+   ============================================================ */
+async function renderReelsPanel() {
+  const panel = document.getElementById('main-panel');
+  panel.innerHTML = `<div class="reels-container" id="reels-container"><p class="empty-state" style="color:#fff;">Loading…</p></div>`;
+  const res = await apiCall('getReels', { offset: 0, limit: 10, userId: currentUser.userId });
+  reelsList = res.reels;
+  reelsHasMore = res.hasMore;
+  renderReelsList();
+}
+
+function renderReelsList() {
+  const container = document.getElementById('reels-container');
+  if (!container) return;
+  container.innerHTML = `
+    <button id="upload-reel-btn" class="upload-reel-btn">+ Reel</button>
+    ${reelsList.length === 0 ? '<p class="empty-state" style="color:#fff;">No reels yet — be the first to upload.</p>' : ''}
+    ${reelsList.map(reelCardHtml).join('')}
+    ${reelsHasMore ? '<button class="load-more-reel-btn" id="load-more-reels-btn">Load more</button>' : ''}
+  `;
+  document.getElementById('upload-reel-btn').addEventListener('click', uploadReel);
+  const moreBtn = document.getElementById('load-more-reels-btn');
+  if (moreBtn) moreBtn.addEventListener('click', loadMoreReels);
+
+  document.querySelectorAll('.reel-like-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const reelId = btn.dataset.reelId;
+      try {
+        const res = await apiCall('likeReel', { reelId, userId: currentUser.userId });
+        const reel = reelsList.find(r => r.reelId === reelId);
+        if (reel) { reel.liked = res.liked; reel.likeCount = res.likeCount; }
+        btn.classList.toggle('active', res.liked);
+        btn.querySelector('.reel-like-count').textContent = res.likeCount;
+      } catch (err) { console.error(err); }
+    });
   });
+}
 
-  attachMentionAutocomplete(document.getElementById('new-post-text'));
+function reelCardHtml(reel) {
+  return `
+  <div class="reel-card">
+    <video src="${reel.videoURL}" loop playsinline controls class="reel-video"></video>
+    <div class="reel-overlay">
+      <div class="reel-author">${avatarHtml(reel.authorName, reel.authorPhoto, 32)}<span>${escapeHtml(reel.authorName)}</span></div>
+      ${reel.caption ? `<div class="reel-caption">${linkify(escapeHtml(reel.caption))}</div>` : ''}
+      <button class="reel-like-btn ${reel.liked ? 'active' : ''}" data-reel-id="${reel.reelId}">❤️ <span class="reel-like-count">${reel.likeCount || 0}</span></button>
+    </div>
+  </div>`;
+}
 
-  document.getElementById('new-post-submit').addEventListener('click', async (e) => {
-    const btn = e.target;
-    const textEl = document.getElementById('new-post-text');
-    const text = textEl.value.trim();
-    const file = imageInput.files[0] || null;
-    if (!text && !file) return;
-    btn.disabled = true; btn.textContent = 'Posting…';
+async function loadMoreReels() {
+  const res = await apiCall('getReels', { offset: reelsList.length, limit: 10, userId: currentUser.userId });
+  reelsList = reelsList.concat(res.reels);
+  reelsHasMore = res.hasMore;
+  renderReelsList();
+}
+
+function uploadReel() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'video/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const caption = prompt('Add a caption (optional):') || '';
     try {
-      let imageBase64 = null;
-      if (file) imageBase64 = await fileToBase64(file);
-      const friends = await ensureFriendsCache();
-      const mentions = extractMentions(text, friends);
-      const res = await apiCall('createPost', {
-        authorId: currentUser.userId, authorName: currentUser.name, authorPhoto: currentUser.photoURL || '',
-        text, imageBase64, imageMime: file?.type, imageName: file?.name, mentions,
-      });
-      textEl.value = ''; imageInput.value = '';
-      feedPosts = [res.post].concat(feedPosts);
-      latestPostTimestamp = res.post.createdAt;
-      renderFeedPanel();
-    } catch (err) {
-      alert('Failed to post: ' + err.message);
-    } finally {
-      btn.disabled = false; btn.textContent = 'Post';
-    }
+      const base64 = await fileToBase64(file);
+      const res = await apiCall('createReel', { authorId: currentUser.userId, authorName: currentUser.name, authorPhoto: currentUser.photoURL || '', videoBase64: base64, videoMime: file.type, videoName: file.name, caption });
+      reelsList = [res.reel].concat(reelsList);
+      renderReelsList();
+    } catch (err) { alert('Failed to upload reel: ' + err.message); }
+  };
+  input.click();
+}
+
+/* ============================================================
+   Stories — 24hr photo/video, shown as a bar of circles above the feed
+   ============================================================ */
+function storiesBarHtml() {
+  const mine = storyGroups.find(g => g.authorId === currentUser.userId);
+  const others = storyGroups.filter(g => g.authorId !== currentUser.userId);
+  const selfCircle = `
+    <div class="story-circle add-story" id="add-story-btn">
+      ${avatarHtml(currentUser.name, currentUser.photoURL, 56)}
+      <span class="story-plus">+</span>
+      <div class="story-label">${mine ? 'Your story' : 'Add story'}</div>
+    </div>`;
+  const otherCircles = others.map((g, i) => `
+    <div class="story-circle" data-group-id="${g.authorId}">
+      ${avatarHtml(g.authorName, g.authorPhoto, 56)}
+      <div class="story-label">${escapeHtml(g.authorName.split(' ')[0])}</div>
+    </div>`).join('');
+  return selfCircle + (mine ? `
+    <div class="story-circle" data-group-id="${mine.authorId}">
+      ${avatarHtml(mine.authorName, mine.authorPhoto, 56)}
+      <div class="story-label">View</div>
+    </div>` : '') + otherCircles;
+}
+
+async function loadStories() {
+  try {
+    const res = await apiCall('getActiveStories', { userId: currentUser.userId });
+    storyGroups = res.groups;
+    const bar = document.getElementById('stories-bar');
+    if (bar) { bar.innerHTML = storiesBarHtml(); attachStoriesBarHandlers(); }
+  } catch (err) { /* silent */ }
+}
+
+function attachStoriesBarHandlers() {
+  const addBtn = document.getElementById('add-story-btn');
+  if (addBtn) addBtn.addEventListener('click', uploadStory);
+  document.querySelectorAll('.story-circle[data-group-id]').forEach(el => {
+    el.addEventListener('click', () => openStoryViewer(el.dataset.groupId));
   });
+}
+
+async function uploadStory() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*,video/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      await apiCall('createStory', { authorId: currentUser.userId, authorName: currentUser.name, authorPhoto: currentUser.photoURL || '', mediaBase64: base64, mediaMime: file.type, mediaName: file.name });
+      loadStories();
+    } catch (err) { alert('Failed to post story: ' + err.message); }
+  };
+  input.click();
+}
+
+function openStoryViewer(authorId) {
+  const groupIndex = storyGroups.findIndex(g => g.authorId === authorId);
+  if (groupIndex === -1) return;
+  storyViewer = { groupIndex, storyIndex: 0 };
+  renderStoryViewer();
+}
+
+function renderStoryViewer() {
+  if (!storyViewer) { const el = document.getElementById('story-viewer-overlay'); if (el) el.remove(); return; }
+  const group = storyGroups[storyViewer.groupIndex];
+  const story = group.stories[storyViewer.storyIndex];
+
+  let overlay = document.getElementById('story-viewer-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'story-viewer-overlay';
+    overlay.className = 'story-viewer-overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `
+    <div class="story-viewer-header">
+      <div class="story-progress">${group.stories.map((s, i) => `<span class="${i <= storyViewer.storyIndex ? 'filled' : ''}"></span>`).join('')}</div>
+      <div class="story-viewer-author">${avatarHtml(group.authorName, group.authorPhoto, 28)}<span>${escapeHtml(group.authorName)}</span></div>
+      <button id="story-close-btn">✕</button>
+    </div>
+    <div class="story-viewer-body">
+      ${story.type === 'video' ? `<video src="${story.mediaURL}" autoplay controls></video>` : `<img src="${story.mediaURL}" alt="" />`}
+    </div>
+    <div class="story-viewer-nav">
+      <button id="story-prev-btn">‹</button>
+      <button id="story-next-btn">›</button>
+    </div>`;
+
+  document.getElementById('story-close-btn').addEventListener('click', () => { storyViewer = null; renderStoryViewer(); });
+  document.getElementById('story-prev-btn').addEventListener('click', () => stepStory(-1));
+  document.getElementById('story-next-btn').addEventListener('click', () => stepStory(1));
+}
+
+function stepStory(delta) {
+  const group = storyGroups[storyViewer.groupIndex];
+  let newStoryIndex = storyViewer.storyIndex + delta;
+  if (newStoryIndex >= group.stories.length) {
+    if (storyViewer.groupIndex + 1 < storyGroups.length) { storyViewer = { groupIndex: storyViewer.groupIndex + 1, storyIndex: 0 }; renderStoryViewer(); }
+    else { storyViewer = null; renderStoryViewer(); }
+    return;
+  }
+  if (newStoryIndex < 0) {
+    if (storyViewer.groupIndex - 1 >= 0) { const prevGroup = storyGroups[storyViewer.groupIndex - 1]; storyViewer = { groupIndex: storyViewer.groupIndex - 1, storyIndex: prevGroup.stories.length - 1 }; renderStoryViewer(); }
+    return;
+  }
+  storyViewer.storyIndex = newStoryIndex;
+  renderStoryViewer();
+}
+
+async function showSavedPosts() {
+  showingSaved = true;
+  const res = await apiCall('getSavedPosts', { userId: currentUser.userId });
+  feedPosts = res.posts;
+  renderFeedPanel();
+}
+
+async function showAllPosts() {
+  showingSaved = false;
+  await loadFirstPage();
+}
+
+function attachFeedHandlers() {
+  attachStoriesBarHandlers();
+  document.getElementById('show-all-btn').addEventListener('click', showAllPosts);
+  document.getElementById('show-saved-btn').addEventListener('click', showSavedPosts);
+
+  const imageInput = document.getElementById('new-post-image');
+  if (imageInput) {
+    imageInput.addEventListener('change', () => {
+      document.getElementById('new-post-filename').textContent = imageInput.files[0] ? imageInput.files[0].name : 'Add photo';
+    });
+    attachMentionAutocomplete(document.getElementById('new-post-text'));
+
+    document.getElementById('new-post-submit').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const textEl = document.getElementById('new-post-text');
+      const text = textEl.value.trim();
+      const file = imageInput.files[0] || null;
+      if (!text && !file) return;
+      btn.disabled = true; btn.textContent = 'Posting…';
+      try {
+        let imageBase64 = null;
+        if (file) imageBase64 = await fileToBase64(file);
+        const friends = await ensureFriendsCache();
+        const mentions = extractMentions(text, friends);
+        const res = await apiCall('createPost', {
+          authorId: currentUser.userId, authorName: currentUser.name, authorPhoto: currentUser.photoURL || '',
+          text, imageBase64, imageMime: file?.type, imageName: file?.name, mentions,
+        });
+        textEl.value = ''; imageInput.value = '';
+        feedPosts = [res.post].concat(feedPosts);
+        latestPostTimestamp = res.post.createdAt;
+        renderFeedPanel();
+      } catch (err) {
+        alert('Failed to post: ' + err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Post';
+      }
+    });
+  }
 
   const loadMoreBtn = document.getElementById('load-more-btn');
   if (loadMoreBtn) loadMoreBtn.addEventListener('click', async () => {
@@ -814,6 +1168,32 @@ function attachFeedHandlers() {
           alert('Post copied — paste it anywhere to share.');
         }
       } catch (err) { /* user cancelled share sheet — ignore */ }
+    });
+  });
+
+  document.querySelectorAll('.save-post-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postId = btn.dataset.postId;
+      try {
+        const res = await apiCall('savePost', { userId: currentUser.userId, postId });
+        if (showingSaved && !res.saved) {
+          feedPosts = feedPosts.filter(p => p.postId !== postId);
+        } else {
+          const post = feedPosts.find(p => p.postId === postId);
+          if (post) post.saved = res.saved;
+        }
+        renderFeedPanel();
+      } catch (err) { alert(err.message); }
+    });
+  });
+
+  document.querySelectorAll('.report-post-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const reason = prompt('Why are you reporting this post? (optional)') || '';
+      try {
+        await apiCall('reportContent', { reporterId: currentUser.userId, targetType: 'post', targetId: btn.dataset.postId, reason });
+        alert('Thanks — this post has been reported.');
+      } catch (err) { alert(err.message); }
     });
   });
 
@@ -919,22 +1299,38 @@ function attachCommentOwnerHandlers(container, postId) {
 /* ============================================================
    Chat (generalized — powers both the चिल्लाक्स हाउस room and DMs)
    ============================================================ */
+let currentTypingUsers = [];
+
 async function loadConversationInitial() {
-  const res = await apiCall('getMessages', { conversationId: activeConversationId });
+  const res = await apiCall('getMessages', { conversationId: activeConversationId, userId: currentUser.userId });
   conversationMessages = res.messages;
   conversationLastTimestamp = conversationMessages.length
     ? conversationMessages[conversationMessages.length - 1].createdAt
     : null;
+  currentTypingUsers = res.typingUsers || [];
   renderChatPanel();
 }
 
 async function pollConversation() {
-  const res = await apiCall('getMessages', { conversationId: activeConversationId, since: conversationLastTimestamp });
+  const res = await apiCall('getMessages', { conversationId: activeConversationId, since: conversationLastTimestamp, userId: currentUser.userId });
+  const typingChanged = JSON.stringify(res.typingUsers || []) !== JSON.stringify(currentTypingUsers);
+  currentTypingUsers = res.typingUsers || [];
   if (res.messages.length) {
     conversationMessages = conversationMessages.concat(res.messages);
     conversationLastTimestamp = res.messages[res.messages.length - 1].createdAt;
     renderChatPanel();
+  } else if (typingChanged) {
+    updateTypingIndicator();
   }
+}
+
+function updateTypingIndicator() {
+  const el = document.getElementById('typing-indicator');
+  if (!el) return;
+  if (!currentTypingUsers.length) { el.textContent = ''; return; }
+  el.textContent = conversationKind(activeConversationId) === 'dm'
+    ? `${activeConversationTitle} is typing…`
+    : 'Someone is typing…';
 }
 
 function enterConversation(conversationId, title) {
@@ -959,7 +1355,39 @@ function exitToInboxList() {
 
 let replyingTo = null; // { messageId, text, senderName } — snapshot shown as a banner above the input
 
+function pollBubbleHtml(m) {
+  const options = m.pollOptions || [];
+  const counts = m.pollCounts || {};
+  const total = m.pollTotalVotes || 0;
+  const myVote = m.pollMyVote;
+  const showResults = myVote !== null && myVote !== undefined;
+
+  const optionsHtml = options.map((opt, i) => {
+    const voteCount = counts[i] || 0;
+    const pct = total ? Math.round((voteCount / total) * 100) : 0;
+    const isMine = myVote === i;
+    const isCorrect = m.pollIsQuiz && i === m.pollCorrectIndex;
+    const resultClass = showResults && m.pollIsQuiz ? (isCorrect ? 'correct' : (isMine ? 'incorrect' : '')) : '';
+    return `
+      <button class="poll-option ${isMine ? 'mine' : ''} ${resultClass}" data-message-id="${m.messageId}" data-option-index="${i}" ${showResults ? 'disabled' : ''}>
+        <span class="poll-option-label">${escapeHtml(opt)} ${showResults && m.pollIsQuiz && isCorrect ? '✓' : ''}</span>
+        ${showResults ? `<span class="poll-option-bar" style="width:${pct}%"></span><span class="poll-option-pct">${pct}%</span>` : ''}
+      </button>`;
+  }).join('');
+
+  return `
+  <div class="chat-bubble-row" data-message-id="${m.messageId}">
+    <div class="chat-bubble poll-bubble">
+      <div class="chat-sender">${escapeHtml(m.senderName)} ${m.pollIsQuiz ? 'started a quiz' : 'started a poll'}</div>
+      <p class="poll-question">${escapeHtml(m.text)}</p>
+      <div class="poll-options">${optionsHtml}</div>
+      <div class="poll-meta">${total} vote${total === 1 ? '' : 's'}</div>
+    </div>
+  </div>`;
+}
+
 function chatBubbleHtml(m) {
+  if (m.type === 'poll') return pollBubbleHtml(m);
   const mine = m.senderId === currentUser.userId;
   let mediaHtml = '';
   if (m.type === 'audio') mediaHtml = `<audio controls src="${m.mediaURL}"></audio>`;
@@ -1026,6 +1454,7 @@ function renderChatPanel() {
       <div class="chat-messages" id="chat-messages">
         ${conversationMessages.map(chatBubbleHtml).join('')}
       </div>
+      <div id="typing-indicator" class="typing-indicator">${currentTypingUsers.length ? (conversationKind(activeConversationId) === 'dm' ? escapeHtml(activeConversationTitle) + ' is typing…' : 'Someone is typing…') : ''}</div>
       <div id="recording-area"></div>
       <div id="reply-banner"></div>
       <form class="chat-input-row" id="chat-form">
@@ -1033,6 +1462,7 @@ function renderChatPanel() {
         <input type="file" id="attach-input" accept="image/*,video/*" hidden />
         <button type="button" id="rec-audio-btn" title="Record audio">🎤</button>
         <button type="button" id="rec-video-btn" title="Record video">🎥</button>
+        <button type="button" id="poll-btn" title="Create poll/quiz">📊</button>
         <button type="button" class="emoji-btn" title="Emoji">😊</button>
         <input id="chat-text" placeholder="${placeholder}" />
         <button type="submit">Send</button>
@@ -1051,6 +1481,92 @@ function renderChatPanel() {
   attachChatHandlers();
 }
 
+async function openCreatePollModal() {
+  const existing = document.getElementById('poll-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'poll-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3 class="card-title" style="font-size:22px;">New poll</h3>
+      <form class="card-form" id="poll-form">
+        <input id="poll-question" placeholder="Ask a question…" required />
+        <div id="poll-options-list" class="group-checklist" style="max-height:none;">
+          <input class="poll-option-input" placeholder="Option 1" />
+          <input class="poll-option-input" placeholder="Option 2" />
+        </div>
+        <button type="button" id="add-poll-option-btn" class="small-action-btn" style="align-self:flex-start;">+ Add option</button>
+        <label class="checklist-item" style="border:1px solid var(--border); border-radius:8px; padding:8px;">
+          <input type="checkbox" id="poll-is-quiz" />
+          <span>Make this a quiz (mark the correct answer)</span>
+        </label>
+        <div id="quiz-answer-picker" class="hidden"></div>
+        <p class="form-error hidden" id="poll-error"></p>
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel-btn" id="poll-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary" id="poll-save-btn" style="margin-top:0;">Post</button>
+        </div>
+      </form>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('poll-cancel-btn').addEventListener('click', () => overlay.remove());
+
+  const optionsList = document.getElementById('poll-options-list');
+  document.getElementById('add-poll-option-btn').addEventListener('click', () => {
+    const count = optionsList.querySelectorAll('.poll-option-input').length;
+    if (count >= 6) return;
+    const input = document.createElement('input');
+    input.className = 'poll-option-input';
+    input.placeholder = `Option ${count + 1}`;
+    optionsList.appendChild(input);
+    refreshQuizAnswerPicker();
+  });
+
+  function refreshQuizAnswerPicker() {
+    const picker = document.getElementById('quiz-answer-picker');
+    const isQuiz = document.getElementById('poll-is-quiz').checked;
+    if (!isQuiz) { picker.classList.add('hidden'); picker.innerHTML = ''; return; }
+    picker.classList.remove('hidden');
+    const opts = [...optionsList.querySelectorAll('.poll-option-input')].map((el, i) => ({ i, val: el.value.trim() || `Option ${i + 1}` }));
+    picker.innerHTML = `<p style="font-size:12px;color:var(--ink-soft);margin:0 0 6px;">Correct answer:</p>` +
+      opts.map(o => `<label class="checklist-item"><input type="radio" name="correct-option" value="${o.i}" ${o.i === 0 ? 'checked' : ''}/> <span>${escapeHtml(o.val)}</span></label>`).join('');
+  }
+  document.getElementById('poll-is-quiz').addEventListener('change', refreshQuizAnswerPicker);
+  optionsList.addEventListener('input', refreshQuizAnswerPicker);
+
+  document.getElementById('poll-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('poll-error');
+    errorEl.classList.add('hidden');
+    const question = document.getElementById('poll-question').value.trim();
+    const options = [...optionsList.querySelectorAll('.poll-option-input')].map(el => el.value.trim()).filter(Boolean);
+    if (!question || options.length < 2) {
+      errorEl.textContent = 'Add a question and at least 2 options.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    const isQuiz = document.getElementById('poll-is-quiz').checked;
+    const correctIndex = isQuiz ? Number(document.querySelector('input[name="correct-option"]:checked')?.value || 0) : -1;
+
+    try {
+      const res = await apiCall('createPoll', {
+        conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, senderPhoto: currentUser.photoURL || '',
+        question, options, isQuiz, correctIndex,
+      });
+      conversationMessages.push(res.message);
+      conversationLastTimestamp = res.message.createdAt;
+      overlay.remove();
+      renderChatPanel();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.remove('hidden');
+    }
+  });
+}
+
 function renderReplyBanner() {
   const el = document.getElementById('reply-banner');
   if (!el) return;
@@ -1067,6 +1583,13 @@ function attachChatHandlers() {
   attachMentionAutocomplete(document.getElementById('chat-text'));
   attachEmojiPicker(document.querySelector('#chat-form .emoji-btn'), document.getElementById('chat-text'));
   renderReplyBanner();
+
+  let typingTimeout = null;
+  document.getElementById('chat-text').addEventListener('input', () => {
+    if (typingTimeout) return; // throttle — only send once per ~2s while actively typing
+    apiCall('setTyping', { conversationId: activeConversationId, userId: currentUser.userId }).catch(() => {});
+    typingTimeout = setTimeout(() => { typingTimeout = null; }, 2000);
+  });
 
   document.getElementById('chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1106,6 +1629,20 @@ function attachChatHandlers() {
 
   document.getElementById('rec-audio-btn').addEventListener('click', () => startRecording('audio'));
   document.getElementById('rec-video-btn').addEventListener('click', () => startRecording('video'));
+  document.getElementById('poll-btn').addEventListener('click', openCreatePollModal);
+
+  document.querySelectorAll('.poll-option:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const messageId = btn.dataset.messageId;
+      const optionIndex = Number(btn.dataset.optionIndex);
+      try {
+        const res = await apiCall('votePoll', { pollId: messageId, userId: currentUser.userId, optionIndex });
+        const msg = conversationMessages.find(m => m.messageId === messageId);
+        if (msg) { msg.pollCounts = res.results.counts; msg.pollTotalVotes = res.results.totalVotes; msg.pollMyVote = res.results.myVote; }
+        renderChatPanel();
+      } catch (err) { alert(err.message); }
+    });
+  });
 
   document.querySelectorAll('.reply-msg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1221,7 +1758,7 @@ function cancelRecording() {
 function personCardHtml(user, actionHtml) {
   return `
   <div class="person-card">
-    ${avatarHtml(user.name, user.photoURL)}
+    <div class="avatar-wrap">${avatarHtml(user.name, user.photoURL)}${user.userId ? onlineDotHtml(user.userId) : ''}</div>
     <div class="person-info">
       <div class="person-name">${escapeHtml(user.name)}</div>
       <div class="person-email">${escapeHtml(user.email)}</div>
@@ -1231,10 +1768,12 @@ function personCardHtml(user, actionHtml) {
 }
 
 function friendStatusActionHtml(user) {
-  if (user.friendStatus === 'accepted') return `<span class="person-status">Friends</span>`;
-  if (user.friendStatus === 'pending_sent') return `<span class="person-status">Requested</span>`;
-  if (user.friendStatus === 'pending_received') return `<span class="person-status">Check requests ↓</span>`;
-  return `<button class="add-friend-btn" data-user-id="${user.userId}">Add friend</button>`;
+  let primary;
+  if (user.friendStatus === 'accepted') primary = `<span class="person-status">Friends</span>`;
+  else if (user.friendStatus === 'pending_sent') primary = `<span class="person-status">Requested</span>`;
+  else if (user.friendStatus === 'pending_received') primary = `<span class="person-status">Check requests ↓</span>`;
+  else primary = `<button class="add-friend-btn" data-user-id="${user.userId}">Add friend</button>`;
+  return primary + `<button class="block-user-btn" data-user-id="${user.userId}" data-user-name="${escapeHtml(user.name)}" title="Block">🚫</button>`;
 }
 
 function renderPeoplePanel() {
@@ -1308,6 +1847,8 @@ async function refreshPeopleData() {
     ? friendsList.map(u => personCardHtml(u, `<button class="message-friend-btn" data-user-id="${u.userId}" data-user-name="${escapeHtml(u.name)}">Message</button>`)).join('')
     : '<p class="empty-state">No friends yet — send some requests above.</p>';
 
+  refreshOnlineStatus(friendsList.map(u => u.userId));
+
   attachPeopleActionHandlers();
 }
 
@@ -1345,6 +1886,19 @@ function attachPeopleActionHandlers() {
       selectedFriend = { userId: btn.dataset.userId, name: btn.dataset.userName };
       currentTab = 'inbox';
       render();
+    });
+  });
+
+  document.querySelectorAll('.block-user-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Block ${btn.dataset.userName}? They won't appear in your feed or search.`)) return;
+      try {
+        await apiCall('blockUser', { blockerId: currentUser.userId, blockedId: btn.dataset.userId });
+        cachedFriends = null;
+        refreshPeopleData();
+        const resultsBox = document.getElementById('people-search-results');
+        if (resultsBox) resultsBox.innerHTML = '';
+      } catch (err) { alert(err.message); }
     });
   });
 }
@@ -1811,6 +2365,33 @@ async function refreshManageGroupModal() {
 }
 
 /* ============================================================
+   Presence — lightweight "online" heartbeat
+   ============================================================ */
+function startPresenceHeartbeat() {
+  if (presenceHeartbeatInterval) return;
+  apiCall('heartbeat', { userId: currentUser.userId }).catch(() => {});
+  presenceHeartbeatInterval = setInterval(() => {
+    apiCall('heartbeat', { userId: currentUser.userId }).catch(() => {});
+  }, 20000);
+}
+function stopPresenceHeartbeat() { if (presenceHeartbeatInterval) { clearInterval(presenceHeartbeatInterval); presenceHeartbeatInterval = null; } }
+
+async function refreshOnlineStatus(userIds) {
+  if (!userIds.length) return;
+  try {
+    const res = await apiCall('getOnlineStatus', { userIds });
+    Object.assign(onlineStatusMap, res.status);
+    document.querySelectorAll('[data-online-for]').forEach(dot => {
+      dot.classList.toggle('online', !!onlineStatusMap[dot.dataset.onlineFor]);
+    });
+  } catch (err) { /* silent */ }
+}
+
+function onlineDotHtml(userId) {
+  return `<span class="online-dot ${onlineStatusMap[userId] ? 'online' : ''}" data-online-for="${userId}"></span>`;
+}
+
+/* ============================================================
    Activity watcher — desktop notification + sound for new
    messages (DM/group) and @mentions, even outside the active tab
    ============================================================ */
@@ -1834,8 +2415,51 @@ async function checkNewActivity() {
   try {
     const res = await apiCall('getNewActivity', { userId: currentUser.userId, since: lastActivityCheck });
     lastActivityCheck = res.checkedAt;
-    res.items.forEach(showActivityNotification);
+    res.items.forEach(item => {
+      showActivityNotification(item);
+      notificationHistory.unshift(item);
+      if (notificationHistory.length > 50) notificationHistory.length = 50;
+      unreadNotificationCount++;
+    });
+    if (res.items.length) updateBellBadge();
   } catch (err) { /* silent — background poll */ }
+}
+
+function updateBellBadge() {
+  const btn = document.getElementById('bell-btn');
+  if (!btn) return;
+  btn.innerHTML = `🔔${unreadNotificationCount > 0 ? `<span class="bell-badge">${unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>` : ''}`;
+}
+
+function toggleBellDropdown() {
+  const existing = document.getElementById('bell-dropdown');
+  if (existing) { existing.remove(); return; }
+
+  unreadNotificationCount = 0;
+  updateBellBadge();
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'bell-dropdown';
+  dropdown.className = 'bell-dropdown';
+  dropdown.innerHTML = notificationHistory.length
+    ? notificationHistory.map(item => `
+        <div class="bell-item">
+          <strong>${escapeHtml(item.title)}</strong>
+          <div>${escapeHtml((item.body || '').slice(0, 80))}</div>
+        </div>`).join('')
+    : '<p class="empty-state">No notifications yet.</p>';
+  document.getElementById('bell-btn').parentElement.style.position = 'relative';
+  document.getElementById('bell-btn').parentElement.appendChild(dropdown);
+
+  dropdown.querySelectorAll('.bell-item').forEach((el, i) => {
+    el.addEventListener('click', () => { handleActivityClick(notificationHistory[i]); dropdown.remove(); });
+  });
+
+  setTimeout(() => {
+    document.addEventListener('click', function handler(ev) {
+      if (!dropdown.contains(ev.target) && ev.target.id !== 'bell-btn') { dropdown.remove(); document.removeEventListener('click', handler); }
+    });
+  }, 0);
 }
 
 function playNotificationSound() {
@@ -1892,6 +2516,21 @@ function handleActivityClick(item) {
 /* ============================================================
    Profile modal — edit name / bio / photo
    ============================================================ */
+async function loadBlockedUsersList() {
+  const res = await apiCall('getBlockedUsers', { userId: currentUser.userId });
+  const box = document.getElementById('blocked-users-list');
+  if (!box) return;
+  box.innerHTML = res.users.length
+    ? res.users.map(u => personCardHtml(u, `<button class="unblock-user-btn" data-user-id="${u.userId}">Unblock</button>`)).join('')
+    : '<p class="empty-state">No blocked users.</p>';
+  box.querySelectorAll('.unblock-user-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await apiCall('unblockUser', { blockerId: currentUser.userId, blockedId: btn.dataset.userId });
+      loadBlockedUsersList();
+    });
+  });
+}
+
 function openProfileModal() {
   const existing = document.getElementById('profile-modal-overlay');
   if (existing) existing.remove();
@@ -1915,8 +2554,13 @@ function openProfileModal() {
           <button type="submit" class="btn-primary" id="profile-save-btn" style="margin-top:0;">Save</button>
         </div>
       </form>
+      <section class="people-section" style="margin-top:18px;">
+        <h3>Blocked users</h3>
+        <div id="blocked-users-list"><p class="post-time">Loading…</p></div>
+      </section>
     </div>`;
   document.body.appendChild(overlay);
+  loadBlockedUsersList();
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
   document.getElementById('profile-cancel-btn').addEventListener('click', () => overlay.remove());
@@ -1973,6 +2617,11 @@ document.addEventListener('visibilitychange', () => {
    Boot
    ============================================================ */
 render();
+setTimeout(() => {
+  const splash = document.getElementById('splash-screen');
+  if (splash) splash.classList.add('splash-hidden');
+  setTimeout(() => splash?.remove(), 600);
+}, 1100);
 </script>
 </body>
 </html>
