@@ -149,6 +149,11 @@ input, textarea { font-family: inherit; }
 .reply-quote { border-left: 3px solid var(--indigo); padding: 4px 8px; margin-bottom: 6px; font-size: 12px; background: rgba(61,75,140,0.08); border-radius: 4px; }
 .chat-bubble-row.mine .reply-quote { background: rgba(255,255,255,0.15); border-left-color: #fff; }
 
+.chat-bubble-row.pending { opacity: 0.6; }
+.msg-status { font-size: 11px; margin-top: 3px; opacity: 0.8; }
+.msg-status.failed { color: var(--danger); font-weight: 600; }
+.chat-bubble-row.mine .msg-status:not(.failed) { color: rgba(255,255,255,0.8); }
+
 #reply-banner:empty { display: none; }
 .reply-banner-content { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: var(--paper); border-top: 1px solid var(--border); font-size: 12px; color: var(--ink-soft); }
 .reply-banner-content button { background: none; border: none; font-size: 14px; color: var(--ink-soft); }
@@ -217,6 +222,7 @@ input, textarea { font-family: inherit; }
 .chat-bubble p { margin: 0; line-height: 1.4; }
 .chat-sender { font-size: 11px; font-weight: 700; color: var(--sage); margin-bottom: 2px; }
 .chat-bubble audio, .chat-bubble video { max-width: 100%; border-radius: 8px; }
+.chat-bubble .audio-embed { width: 260px; height: 54px; border: none; border-radius: 8px; max-width: 100%; }
 .chat-bubble img { max-width: 100%; border-radius: 8px; display: block; }
 .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
 .chat-input-row input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none; }
@@ -403,15 +409,13 @@ let storyViewer = null; // { groupIndex, storyIndex } — active story being vie
 let reelsList = [];
 let reelsHasMore = true;
 let onlineStatusMap = {}; // userId -> boolean, refreshed periodically for visible people
-let presenceHeartbeatInterval = null;
+let incomingCallOverlayShown = null; // callId currently shown as an incoming-call popup
 let notificationHistory = []; // rolling log of activity items, for the bell dropdown
 let unreadNotificationCount = 0;
 let bellDropdownOpen = false;
 
 // Calls (WebRTC, signaled via polling the Apps Script sheet)
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
-let incomingCallWatcherInterval = null;
-let incomingCallOverlayShown = null; // callId currently shown as an incoming-call popup
 let activeCall = null; // { callId, role, type, pc, localStream, candidateSeen, statusInterval, startedAt }
 
 /* ============================================================
@@ -573,9 +577,7 @@ function render() {
   if (!currentUser) { root.innerHTML = authScreenHtml('login'); attachAuthHandlers('login'); return; }
   root.innerHTML = appShellHtml();
   attachShellHandlers();
-  startIncomingCallWatcher();
-  startActivityWatcher();
-  startPresenceHeartbeat();
+  startBackgroundSync();
 
   stopFeedPolling();
   stopConversationPolling();
@@ -748,8 +750,9 @@ function attachShellHandlers() {
   document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.removeItem(USER_KEY);
     currentUser = null;
-    stopFeedPolling(); stopConversationPolling(); stopIncomingCallWatcher(); stopActivityWatcher(); stopPresenceHeartbeat();
+    stopFeedPolling(); stopConversationPolling(); stopBackgroundSync();
     if (activeCall) hangupCall();
+    stopRingtone(); stopRingback();
     cachedFriends = null;
     notificationHistory = []; unreadNotificationCount = 0;
     render();
@@ -1341,7 +1344,7 @@ function enterConversation(conversationId, title) {
   replyingTo = null;
   stopConversationPolling();
   loadConversationInitial();
-  conversationInterval = setInterval(pollConversation, 4000);
+  conversationInterval = setInterval(pollConversation, 2500);
 }
 
 function stopConversationPolling() { if (conversationInterval) { clearInterval(conversationInterval); conversationInterval = null; } }
@@ -1390,7 +1393,7 @@ function chatBubbleHtml(m) {
   if (m.type === 'poll') return pollBubbleHtml(m);
   const mine = m.senderId === currentUser.userId;
   let mediaHtml = '';
-  if (m.type === 'audio') mediaHtml = `<audio controls src="${m.mediaURL}"></audio>`;
+  if (m.type === 'audio') mediaHtml = `<iframe src="${m.mediaURL}" class="audio-embed" allow="autoplay"></iframe>`;
   else if (m.type === 'video') mediaHtml = `<video controls src="${m.mediaURL}"></video>`;
   else if (m.type === 'image') mediaHtml = `<img src="${m.mediaURL}" alt="" />`;
 
@@ -1399,23 +1402,26 @@ function chatBubbleHtml(m) {
   try { replyObj = m.replyTo && m.replyTo !== 'null' ? (typeof m.replyTo === 'string' ? JSON.parse(m.replyTo) : m.replyTo) : null; } catch (e) { replyObj = null; }
   if (replyObj) replyPreview = `<div class="reply-quote"><strong>${escapeHtml(replyObj.senderName)}</strong> ${escapeHtml((replyObj.text || '').slice(0, 60))}</div>`;
 
-  const ownerActions = mine ? `
+  const ownerActions = mine && !m._pending ? `
     <span class="msg-owner-actions">
       ${m.type === 'text' ? `<button class="edit-msg-btn" data-message-id="${m.messageId}">✏️</button>` : ''}
       <button class="delete-msg-btn" data-message-id="${m.messageId}">🗑️</button>
     </span>` : '';
 
+  const statusHtml = m._pending ? `<div class="msg-status">Sending…</div>` : m._failed ? `<div class="msg-status failed">Failed to send</div>` : '';
+
   return `
-  <div class="chat-bubble-row ${mine ? 'mine' : ''}" data-message-id="${m.messageId}">
+  <div class="chat-bubble-row ${mine ? 'mine' : ''} ${m._pending ? 'pending' : ''}" data-message-id="${m.messageId}">
     ${!mine ? avatarHtml(m.senderName, m.senderPhoto, 28) : ''}
     <div class="chat-bubble">
       ${!mine ? `<div class="chat-sender">${escapeHtml(m.senderName)}</div>` : ''}
       ${replyPreview}
       ${m.type === 'text' ? `<p>${linkify(escapeHtml(m.text))}</p>` : mediaHtml}
-      <div class="msg-actions">
+      ${statusHtml}
+      ${!m._pending ? `<div class="msg-actions">
         <button class="reply-msg-btn" data-message-id="${m.messageId}" data-sender-name="${escapeHtml(m.senderName)}" data-text="${escapeHtml((m.text || (m.type + ' message')).slice(0, 60))}">↩ Reply</button>
         ${ownerActions}
-      </div>
+      </div>` : ''}
     </div>
   </div>`;
 }
@@ -1601,10 +1607,28 @@ function attachChatHandlers() {
     const mentions = extractMentions(text, friends);
     const replySnapshot = replyingTo ? { messageId: replyingTo.messageId, senderName: replyingTo.senderName, text: replyingTo.text } : null;
     replyingTo = null;
-    const res = await apiCall('sendMessage', { conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, senderPhoto: currentUser.photoURL || '', type: 'text', text, mentions, replyTo: replySnapshot });
-    conversationMessages.push(res.message);
-    conversationLastTimestamp = res.message.createdAt;
+
+    // Optimistic send — show it immediately, reconcile with the server once it responds
+    const tempId = 'temp_' + Date.now();
+    const tempMessage = {
+      messageId: tempId, conversationId: activeConversationId, senderId: currentUser.userId,
+      senderName: currentUser.name, senderPhoto: currentUser.photoURL || '', type: 'text', text,
+      replyTo: JSON.stringify(replySnapshot), createdAt: new Date().toISOString(), _pending: true,
+    };
+    conversationMessages.push(tempMessage);
     renderChatPanel();
+
+    try {
+      const res = await apiCall('sendMessage', { conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, senderPhoto: currentUser.photoURL || '', type: 'text', text, mentions, replyTo: replySnapshot });
+      const idx = conversationMessages.findIndex(m => m.messageId === tempId);
+      if (idx !== -1) conversationMessages[idx] = res.message;
+      conversationLastTimestamp = res.message.createdAt;
+      renderChatPanel();
+    } catch (err) {
+      const idx = conversationMessages.findIndex(m => m.messageId === tempId);
+      if (idx !== -1) { conversationMessages[idx]._pending = false; conversationMessages[idx]._failed = true; }
+      renderChatPanel();
+    }
   });
 
   document.getElementById('attach-btn').addEventListener('click', () => document.getElementById('attach-input').click());
@@ -1613,16 +1637,29 @@ function attachChatHandlers() {
     if (!file) return;
     e.target.value = '';
     const type = file.type.startsWith('video') ? 'video' : 'image';
+
+    const tempId = 'temp_' + Date.now();
+    conversationMessages.push({
+      messageId: tempId, conversationId: activeConversationId, senderId: currentUser.userId,
+      senderName: currentUser.name, senderPhoto: currentUser.photoURL || '', type: 'text',
+      text: `Uploading ${type}…`, createdAt: new Date().toISOString(), _pending: true,
+    });
+    renderChatPanel();
+
     try {
       const base64 = await fileToBase64(file);
       const res = await apiCall('sendMessage', {
         conversationId: activeConversationId, senderId: currentUser.userId, senderName: currentUser.name, senderPhoto: currentUser.photoURL || '',
         type, mediaBase64: base64, mediaMime: file.type, mediaName: file.name,
       });
-      conversationMessages.push(res.message);
+      const idx = conversationMessages.findIndex(m => m.messageId === tempId);
+      if (idx !== -1) conversationMessages[idx] = res.message;
       conversationLastTimestamp = res.message.createdAt;
       renderChatPanel();
     } catch (err) {
+      const idx = conversationMessages.findIndex(m => m.messageId === tempId);
+      if (idx !== -1) conversationMessages.splice(idx, 1);
+      renderChatPanel();
       alert('Failed to send: ' + err.message);
     }
   });
@@ -2051,21 +2088,92 @@ async function openNewGroupModal() {
    Calls — WebRTC audio/video calling for DMs, signaled via
    polling the Apps Script sheet (media itself flows peer-to-peer)
    ============================================================ */
-function startIncomingCallWatcher() {
-  if (incomingCallWatcherInterval) return;
-  incomingCallWatcherInterval = setInterval(checkForIncomingCall, 4000);
+let ringAudioCtx = null;
+let ringtoneInterval = null;
+let ringbackInterval = null;
+let incomingCallTimeout = null;
+
+function getRingAudioCtx() {
+  if (!ringAudioCtx) ringAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ringAudioCtx.state === 'suspended') ringAudioCtx.resume().catch(() => {});
+  return ringAudioCtx;
 }
 
-function stopIncomingCallWatcher() {
-  if (incomingCallWatcherInterval) { clearInterval(incomingCallWatcherInterval); incomingCallWatcherInterval = null; }
-}
-
-async function checkForIncomingCall() {
-  if (activeCall || incomingCallOverlayShown) return; // already busy with a call
+function playChime(freqs, duration, volume) {
   try {
-    const res = await apiCall('getIncomingCall', { userId: currentUser.userId });
-    if (res.call) showIncomingCallOverlay(res.call);
-  } catch (err) { /* silent — this is a background poll */ }
+    const ctx = getRingAudioCtx();
+    const now = ctx.currentTime;
+    freqs.forEach((freq) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(volume, now + 0.06);
+      g.gain.setValueAtTime(volume, now + duration - 0.12);
+      g.gain.linearRampToValueAtTime(0.0001, now + duration);
+      o.start(now);
+      o.stop(now + duration);
+    });
+  } catch (e) { /* audio not available — ignore */ }
+}
+
+// Classic two-tone phone ring, repeating
+function startRingtone() {
+  stopRingtone();
+  playChime([950, 1400], 1.1, 0.18);
+  ringtoneInterval = setInterval(() => playChime([950, 1400], 1.1, 0.18), 2200);
+}
+function stopRingtone() {
+  if (ringtoneInterval) { clearInterval(ringtoneInterval); ringtoneInterval = null; }
+}
+
+// Softer single-tone "ringback" heard while your own call is dialing out
+function startRingback() {
+  stopRingback();
+  playChime([440], 1.0, 0.12);
+  ringbackInterval = setInterval(() => playChime([440], 1.0, 0.12), 3000);
+}
+function stopRingback() {
+  if (ringbackInterval) { clearInterval(ringbackInterval); ringbackInterval = null; }
+}
+
+// Consolidated background poll — replaces what used to be three separate
+// timers (incoming-call check, activity/notification check, presence
+// heartbeat). Combining them into one request every 6s cuts background
+// load roughly 3x, which is what was making the app feel sluggish.
+let backgroundSyncInterval = null;
+
+function startBackgroundSync() {
+  if (backgroundSyncInterval) return;
+  lastActivityCheck = new Date().toISOString(); // don't replay old activity on login
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  runBackgroundSync(); // fire once immediately, then on the interval
+  backgroundSyncInterval = setInterval(runBackgroundSync, 6000);
+}
+
+function stopBackgroundSync() {
+  if (backgroundSyncInterval) { clearInterval(backgroundSyncInterval); backgroundSyncInterval = null; }
+}
+
+async function runBackgroundSync() {
+  try {
+    const res = await apiCall('getBackgroundSync', { userId: currentUser.userId, since: lastActivityCheck });
+    lastActivityCheck = res.checkedAt;
+
+    if (res.call && !activeCall && !incomingCallOverlayShown) showIncomingCallOverlay(res.call);
+
+    res.items.forEach(item => {
+      showActivityNotification(item);
+      notificationHistory.unshift(item);
+      if (notificationHistory.length > 50) notificationHistory.length = 50;
+      unreadNotificationCount++;
+    });
+    if (res.items.length) updateBellBadge();
+  } catch (err) { /* silent — background poll */ }
 }
 
 function showCallOverlay(html) {
@@ -2087,6 +2195,10 @@ function hideCallOverlay() {
 
 function showIncomingCallOverlay(call) {
   incomingCallOverlayShown = call.callId;
+  startRingtone();
+  if (incomingCallTimeout) clearTimeout(incomingCallTimeout);
+  incomingCallTimeout = setTimeout(() => { if (incomingCallOverlayShown === call.callId) declineIncomingCall(call); }, 30000);
+
   const initial = escapeHtml((call.callerName || '?')[0] || '?').toUpperCase();
   showCallOverlay(`
     <div class="call-box">
@@ -2104,6 +2216,8 @@ function showIncomingCallOverlay(call) {
 
 async function declineIncomingCall(call) {
   incomingCallOverlayShown = null;
+  stopRingtone();
+  if (incomingCallTimeout) { clearTimeout(incomingCallTimeout); incomingCallTimeout = null; }
   hideCallOverlay();
   try { await apiCall('rejectCall', { callId: call.callId }); } catch (err) { /* ignore */ }
 }
@@ -2142,13 +2256,14 @@ async function initiateCall(calleeId, calleeName, type) {
       calleeId, calleeName, type, offerSDP: offer,
     });
     activeCall.callId = res.callId;
+    startRingback();
   } catch (err) {
     alert('Could not start call: ' + err.message);
     hangupCall();
     return;
   }
 
-  activeCall.statusInterval = setInterval(() => pollOutgoingCall(calleeName, type), 2000);
+  activeCall.statusInterval = setInterval(() => pollOutgoingCall(calleeName, type), 1200);
 }
 
 async function pollOutgoingCall(calleeName, type) {
@@ -2158,12 +2273,13 @@ async function pollOutgoingCall(calleeName, type) {
   if (!call || !activeCall) return;
 
   if (call.status === 'accepted' && !activeCall.pc.currentRemoteDescription) {
+    stopRingback();
     await activeCall.pc.setRemoteDescription(new RTCSessionDescription(call.answerSDP));
     activeCall.startedAt = Date.now();
     renderActiveCallUI(calleeName, type);
   }
-  if (call.status === 'rejected') { showCallEndedMessage(calleeName + ' declined the call.'); return; }
-  if (call.status === 'ended') { showCallEndedMessage('Call ended.'); return; }
+  if (call.status === 'rejected') { stopRingback(); showCallEndedMessage(calleeName + ' declined the call.'); return; }
+  if (call.status === 'ended') { stopRingback(); showCallEndedMessage('Call ended.'); return; }
 
   // add any new candidates from the callee side
   const newOnes = call.calleeCandidates.slice(activeCall.seenCandidates);
@@ -2173,6 +2289,8 @@ async function pollOutgoingCall(calleeName, type) {
 
 async function answerIncomingCall(call) {
   incomingCallOverlayShown = null;
+  stopRingtone();
+  if (incomingCallTimeout) { clearTimeout(incomingCallTimeout); incomingCallTimeout = null; }
   let localStream;
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.type === 'video' });
@@ -2201,7 +2319,7 @@ async function answerIncomingCall(call) {
   await apiCall('answerCall', { callId: call.callId, answerSDP: answer });
 
   renderActiveCallUI(call.callerName, call.type);
-  activeCall.statusInterval = setInterval(() => pollActiveCallForHangupAndCandidates(call.callerName), 2000);
+  activeCall.statusInterval = setInterval(() => pollActiveCallForHangupAndCandidates(call.callerName), 1200);
 }
 
 async function pollActiveCallForHangupAndCandidates() {
@@ -2280,6 +2398,8 @@ function hangupCall() {
 }
 
 function cleanupCall() {
+  stopRingtone();
+  stopRingback();
   if (activeCall) {
     if (activeCall.statusInterval) clearInterval(activeCall.statusInterval);
     if (activeCall.pc) activeCall.pc.close();
@@ -2365,17 +2485,9 @@ async function refreshManageGroupModal() {
 }
 
 /* ============================================================
-   Presence — lightweight "online" heartbeat
+   Presence — online status lookups (heartbeat itself is sent as
+   part of the consolidated background sync poll, not separately)
    ============================================================ */
-function startPresenceHeartbeat() {
-  if (presenceHeartbeatInterval) return;
-  apiCall('heartbeat', { userId: currentUser.userId }).catch(() => {});
-  presenceHeartbeatInterval = setInterval(() => {
-    apiCall('heartbeat', { userId: currentUser.userId }).catch(() => {});
-  }, 20000);
-}
-function stopPresenceHeartbeat() { if (presenceHeartbeatInterval) { clearInterval(presenceHeartbeatInterval); presenceHeartbeatInterval = null; } }
-
 async function refreshOnlineStatus(userIds) {
   if (!userIds.length) return;
   try {
@@ -2392,38 +2504,10 @@ function onlineDotHtml(userId) {
 }
 
 /* ============================================================
-   Activity watcher — desktop notification + sound for new
-   messages (DM/group) and @mentions, even outside the active tab
+   Notification bell state (the actual polling now happens inside
+   the consolidated runBackgroundSync)
    ============================================================ */
 let lastActivityCheck = null;
-let activityPollInterval = null;
-
-function startActivityWatcher() {
-  if (activityPollInterval) return;
-  lastActivityCheck = new Date().toISOString(); // don't replay old activity on login
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-  activityPollInterval = setInterval(checkNewActivity, 10000);
-}
-
-function stopActivityWatcher() {
-  if (activityPollInterval) { clearInterval(activityPollInterval); activityPollInterval = null; }
-}
-
-async function checkNewActivity() {
-  try {
-    const res = await apiCall('getNewActivity', { userId: currentUser.userId, since: lastActivityCheck });
-    lastActivityCheck = res.checkedAt;
-    res.items.forEach(item => {
-      showActivityNotification(item);
-      notificationHistory.unshift(item);
-      if (notificationHistory.length > 50) notificationHistory.length = 50;
-      unreadNotificationCount++;
-    });
-    if (res.items.length) updateBellBadge();
-  } catch (err) { /* silent — background poll */ }
-}
 
 function updateBellBadge() {
   const btn = document.getElementById('bell-btn');
@@ -2606,9 +2690,9 @@ document.addEventListener('visibilitychange', () => {
   if (!currentUser) return;
   if (document.hidden) {
     stopFeedPolling();
-    stopActivityWatcher();
+    stopBackgroundSync();
   } else {
-    startActivityWatcher();
+    startBackgroundSync();
     if (currentTab === 'feed') startFeedPolling();
   }
 });
