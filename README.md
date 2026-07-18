@@ -2637,9 +2637,12 @@ function renderGroupCallUI() {
       </div>
     </div>`);
 
-  document.querySelectorAll('.group-call-tile video').forEach(video => {
-    const stream = video.dataset.streamOwner === 'self' ? groupCallState.localStream : (groupCallState.peers[video.dataset.streamOwner] || {}).remoteStream;
-    if (stream && video.srcObject !== stream) video.srcObject = stream;
+  document.querySelectorAll('.group-call-tile video, .group-call-tile audio').forEach(el => {
+    const stream = el.dataset.streamOwner === 'self' ? groupCallState.localStream : (groupCallState.peers[el.dataset.streamOwner] || {}).remoteStream;
+    if (stream && el.srcObject !== stream) {
+      el.srcObject = stream;
+      el.play().catch(() => { /* will retry once the user interacts again if autoplay is blocked */ });
+    }
   });
 
   document.getElementById('gc-mute-btn').addEventListener('click', toggleGroupCallMute);
@@ -2650,11 +2653,17 @@ function renderGroupCallUI() {
 
 function groupCallTileHtml(name, photo, stream, showVideo, ownerId, isSelf) {
   const hasVideoTrack = stream && showVideo;
+  // Audio is always played through its own dedicated element, decoupled from
+  // whether video is shown — previously, if a peer's camera was off (or the
+  // stream hadn't arrived at render time), there was no playback element at
+  // all for them, so their audio silently never played.
+  const audioEl = (!isSelf && stream) ? `<audio autoplay data-stream-owner="${ownerId}" style="display:none;"></audio>` : '';
   return `
     <div class="group-call-tile">
       ${hasVideoTrack
-        ? `<video autoplay playsinline ${isSelf ? 'muted' : ''} data-stream-owner="${ownerId}"></video>`
+        ? `<video autoplay playsinline muted data-stream-owner="${ownerId}"></video>`
         : `<div class="group-call-avatar">${avatarHtml(name, photo, 64)}</div>`}
+      ${audioEl}
       <div class="group-call-name">${escapeHtml(name)}</div>
     </div>`;
 }
