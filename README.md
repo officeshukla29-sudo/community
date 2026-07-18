@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>चिल्लाक्स हाउस</title>
+<title>Community</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -21,7 +21,17 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body { font-family: 'Inter', -apple-system, sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
-button { font-family: inherit; cursor: pointer; }
+button { font-family: inherit; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, transform 0.08s ease; }
+button:active { transform: scale(0.96); }
+input, textarea { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.post-card, .person-card, .chat-bubble, .story-circle, .reel-card { transition: box-shadow 0.2s ease, transform 0.15s ease; }
+.post-card:hover, .person-card:hover { box-shadow: 0 6px 18px -10px rgba(28,28,30,0.18); }
+.story-circle:hover { transform: translateY(-2px); }
+.modal-overlay { animation: modal-fade-in 0.18s ease; }
+.modal-box { animation: modal-pop-in 0.2s ease; }
+@keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-pop-in { from { opacity: 0; transform: scale(0.96) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.chat-messages { scroll-behavior: smooth; }
 input, textarea { font-family: inherit; }
 
 /* Setup / auth screens */
@@ -234,6 +244,20 @@ input, textarea { font-family: inherit; }
 .recording-controls { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
 .recording-controls button { border: 1px solid var(--border); background: var(--card); border-radius: 7px; padding: 8px 16px; font-size: 13px; }
 
+.group-call-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 16px; background: rgba(76,175,80,0.12); border-bottom: 1px solid var(--border); font-size: 13px; }
+.group-call-banner button { background: #4CAF50; color: #fff; border: none; border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 600; }
+
+.group-call-box { display: flex; flex-direction: column; align-items: center; gap: 16px; color: #fff; width: 100%; max-width: 480px; }
+.group-call-header { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; }
+.group-call-grid { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; max-height: 60vh; overflow-y: auto; padding: 8px; }
+.group-call-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; }
+.group-call-tile video { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.6); background: #222; }
+.group-call-avatar { width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.6); background: rgba(255,255,255,0.08); }
+.group-call-avatar .avatar, .group-call-avatar .avatar-img { width: 64px !important; height: 64px !important; }
+.group-call-name { font-size: 12px; color: rgba(255,255,255,0.85); text-align: center; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-call-controls { display: flex; gap: 10px; }
+.group-call-controls button { background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 20px; padding: 10px 18px; font-size: 13px; font-weight: 600; }
+
 .hidden { display: none !important; }
 
 /* Splash screen */
@@ -336,7 +360,7 @@ input, textarea { font-family: inherit; }
       <div class="globe-line globe-lon globe-lon-2"></div>
     </div>
   </div>
-  <div class="splash-brand">चिल्लाक्स हाउस</div>
+  <div class="splash-brand">Community</div>
   <div class="splash-tagline">Connect everyone, everywhere.</div>
 </div>
 <div id="root"></div>
@@ -364,7 +388,7 @@ function showFatalError(message) {
 }
 
 const CONFIG_KEY = 'nexus_api_url';
-const USER_KEY = 'nexus_चिल्लाक्स हाउस_user';
+const USER_KEY = 'nexus_community_user';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxbI2l7s8erxJlKYHnYL-syBI5v4ZRo1v_CEWhhFlIoqsi8hUWFr9L842AdfIYlaTJ9pA/exec';
 // Always sync to DEFAULT_API_URL — overwrites any stale URL saved from a previous version of this file
 const previousApiUrl = localStorage.getItem(CONFIG_KEY);
@@ -381,10 +405,10 @@ let feedPosts = [];
 let feedHasMore = true;
 let feedInterval = null;
 
-// Generalized conversation state — used for both the चिल्लाक्स हाउस room ("general")
+// Generalized conversation state — used for both the community room ("general")
 // and 1:1 DM threads (conversationId = dm_<sortedUserIds>)
 let activeConversationId = 'general';
-let activeConversationTitle = null; // null = चिल्लाक्स हाउस chat; else the friend's name (DM)
+let activeConversationTitle = null; // null = community chat; else the friend's name (DM)
 let conversationMessages = [];
 let conversationLastTimestamp = null;
 let conversationInterval = null;
@@ -403,6 +427,7 @@ let friendRequests = [];
 let friendsList = [];
 let selectedFriend = null; // { userId, name, isGroup? } — set when a thread is open in the Inbox tab
 let activeGroupInfo = null; // { groupId, name, createdBy, members } — populated when a group thread is open
+let activeGroupCallBanner = null; // { groupCallId, callerName, type } — set if a call is already in progress for the open group
 let showingSaved = false; // Feed tab: showing saved posts instead of the normal feed
 let storyGroups = []; // active (non-expired) stories, grouped by author
 let storyViewer = null; // { groupIndex, storyIndex } — active story being viewed, or null
@@ -596,7 +621,7 @@ function setupScreenHtml() {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चिल्लाक्स हाउस</h1>
+      <h1 class="card-title">Community</h1>
       <p class="card-subtitle">Paste your Apps Script Web app URL to connect this app to your Google Sheet database.</p>
       <form class="card-form" id="setup-form">
         <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec" required />
@@ -655,7 +680,7 @@ function authScreenHtml(mode) {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चिल्लाक्स हाउस</h1>
+      <h1 class="card-title">Community</h1>
       <p class="card-subtitle">${mode === 'login' ? 'Welcome back.' : 'Create your account.'}</p>
       <form class="card-form" id="auth-form">
         ${mode === 'signup' ? `<input type="text" id="auth-name" placeholder="Full name" required />` : ''}
@@ -717,7 +742,7 @@ function appShellHtml() {
   <div class="app">
     <nav class="navbar">
       <div class="nav-left">
-        <span class="brand">चिल्लाक्स हाउस</span>
+        <span class="brand">Community</span>
         <div class="nav-tabs">
           <button id="tab-feed" class="${currentTab === 'feed' ? 'active' : ''}">Feed</button>
           <button id="tab-reels" class="${currentTab === 'reels' ? 'active' : ''}">Reels</button>
@@ -752,6 +777,7 @@ function attachShellHandlers() {
     currentUser = null;
     stopFeedPolling(); stopConversationPolling(); stopBackgroundSync();
     if (activeCall) hangupCall();
+    if (groupCallState) leaveGroupCallFlow();
     stopRingtone(); stopRingback();
     cachedFriends = null;
     notificationHistory = []; unreadNotificationCount = 0;
@@ -857,7 +883,7 @@ function renderFeedPanel() {
       </div>
       ${showingSaved ? '' : `
       <div class="create-post">
-        <textarea id="new-post-text" placeholder="Share something with the चिल्लाक्स हाउस…" rows="3"></textarea>
+        <textarea id="new-post-text" placeholder="Share something with the community…" rows="3"></textarea>
         <div class="create-post-row">
           <label class="file-btn">
             <span id="new-post-filename">Add photo</span>
@@ -1162,7 +1188,7 @@ function attachFeedHandlers() {
     btn.addEventListener('click', async () => {
       const postId = btn.dataset.postId;
       const post = feedPosts.find(p => p.postId === postId);
-      const shareText = `${post.authorName} on चिल्लाक्स हाउस: ${post.text || '(photo)'}`;
+      const shareText = `${post.authorName} on Community: ${post.text || '(photo)'}`;
       try {
         if (navigator.share) {
           await navigator.share({ text: shareText });
@@ -1300,7 +1326,7 @@ function attachCommentOwnerHandlers(container, postId) {
 }
 
 /* ============================================================
-   Chat (generalized — powers both the चिल्लाक्स हाउस room and DMs)
+   Chat (generalized — powers both the community room and DMs)
    ============================================================ */
 let currentTypingUsers = [];
 
@@ -1353,6 +1379,7 @@ function exitToInboxList() {
   stopConversationPolling();
   selectedFriend = null;
   activeGroupInfo = null;
+  activeGroupCallBanner = null;
   renderInboxPanel();
 }
 
@@ -1427,7 +1454,7 @@ function chatBubbleHtml(m) {
 }
 
 function conversationKind(conversationId) {
-  if (conversationId === 'general') return 'चिल्लाक्स हाउस';
+  if (conversationId === 'general') return 'community';
   if (conversationId.startsWith('dm_')) return 'dm';
   if (conversationId.startsWith('group_')) return 'group';
   return 'unknown';
@@ -1445,14 +1472,19 @@ function renderChatPanel() {
     <div class="chat-thread-header">
       <button id="chat-back-btn">← Back</button>
       <span>${escapeHtml(activeConversationTitle)}</span>
-      ${isDirectDm ? `
+      ${isDirectDm || isGroupConvo ? `
         <div class="call-btns">
           <button id="audio-call-btn" title="Audio call">📞</button>
           <button id="video-call-btn" title="Video call">🎥</button>
         </div>` : ''}
-      ${canManageGroup ? `<button id="manage-group-btn" class="small-action-btn" style="margin-left:auto;">Manage</button>` : ''}
-    </div>` : '';
-  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the चिल्लाक्स हाउस…';
+      ${canManageGroup ? `<button id="manage-group-btn" class="small-action-btn">Manage</button>` : ''}
+    </div>
+    ${isGroupConvo && activeGroupCallBanner ? `
+      <div class="group-call-banner">
+        <span>📞 ${escapeHtml(activeGroupCallBanner.callerName)} started a ${activeGroupCallBanner.type} call</span>
+        <button id="join-group-call-banner-btn">Join</button>
+      </div>` : ''}` : '';
+  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the community…';
 
   panel.innerHTML = `
     <div class="chat">
@@ -1480,6 +1512,12 @@ function renderChatPanel() {
   if (isDirectDm) {
     document.getElementById('audio-call-btn').addEventListener('click', () => initiateCall(selectedFriend.userId, selectedFriend.name, 'audio'));
     document.getElementById('video-call-btn').addEventListener('click', () => initiateCall(selectedFriend.userId, selectedFriend.name, 'video'));
+  }
+  if (isGroupConvo) {
+    document.getElementById('audio-call-btn').addEventListener('click', () => startGroupVideoCall(activeGroupInfo?.groupId || selectedFriend.userId, activeConversationTitle, 'audio'));
+    document.getElementById('video-call-btn').addEventListener('click', () => startGroupVideoCall(activeGroupInfo?.groupId || selectedFriend.userId, activeConversationTitle, 'video'));
+    const joinBtn = document.getElementById('join-group-call-banner-btn');
+    if (joinBtn) joinBtn.addEventListener('click', () => joinGroupCallFlow(activeGroupCallBanner.groupCallId, activeGroupInfo?.groupId || selectedFriend.userId, activeConversationTitle, activeGroupCallBanner.type));
   }
   if (canManageGroup) {
     document.getElementById('manage-group-btn').addEventListener('click', openManageGroupModal);
@@ -1964,7 +2002,19 @@ async function loadGroupInfoThenEnter(convoId, friendLike) {
   } catch (err) {
     activeGroupInfo = null;
   }
+  activeGroupCallBanner = null;
   enterConversation(convoId, friendLike.name);
+  checkActiveGroupCallBanner(friendLike.userId);
+}
+
+async function checkActiveGroupCallBanner(groupId) {
+  try {
+    const res = await apiCall('getActiveGroupCall', { groupId });
+    if (res.groupCall && !groupCallState) {
+      activeGroupCallBanner = { groupCallId: res.groupCall.groupCallId, callerName: res.groupCall.callerName, type: res.groupCall.type };
+      renderChatPanel();
+    }
+  } catch (err) { /* silent */ }
 }
 
 async function loadInboxLists() {
@@ -2148,8 +2198,12 @@ let backgroundSyncInterval = null;
 function startBackgroundSync() {
   if (backgroundSyncInterval) return;
   lastActivityCheck = new Date().toISOString(); // don't replay old activity on login
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    } else if (Notification.permission === 'denied') {
+      showInAppToast('Notifications are off', 'Enable them in your browser settings to get message and comment alerts.', null);
+    }
   }
   runBackgroundSync(); // fire once immediately, then on the interval
   backgroundSyncInterval = setInterval(runBackgroundSync, 6000);
@@ -2165,6 +2219,7 @@ async function runBackgroundSync() {
     lastActivityCheck = res.checkedAt;
 
     if (res.call && !activeCall && !incomingCallOverlayShown) showIncomingCallOverlay(res.call);
+    if (res.groupCall && !groupCallState && !activeCall && !incomingCallOverlayShown) showIncomingGroupCallOverlay(res.groupCall);
 
     res.items.forEach(item => {
       showActivityNotification(item);
@@ -2408,6 +2463,229 @@ function cleanupCall() {
   activeCall = null;
 }
 
+/* ============================================================
+   Group calls — mesh WebRTC (each participant connects directly
+   to every other participant). Signaling relayed via the sheet.
+   ============================================================ */
+let groupCallState = null; // { groupCallId, groupId, groupName, type, localStream, peers: {userId:{pc,remoteStream,userName,userPhoto}}, signalInterval, participantsInterval, lastSignalCheck, muted, videoOff }
+
+async function startGroupVideoCall(groupId, groupName, type) {
+  if (groupCallState || activeCall) { alert('Already in a call.'); return; }
+  let localStream;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+  } catch (err) {
+    alert('Could not access ' + (type === 'video' ? 'camera/microphone' : 'microphone') + ': ' + err.message);
+    return;
+  }
+  try {
+    const res = await apiCall('startGroupCall', { groupId, callerId: currentUser.userId, callerName: currentUser.name, callerPhoto: currentUser.photoURL || '', type });
+    beginGroupCallSession(res.groupCall.groupCallId, groupId, groupName, type, localStream);
+  } catch (err) {
+    alert('Could not start call: ' + err.message);
+    localStream.getTracks().forEach(t => t.stop());
+  }
+}
+
+async function joinGroupCallFlow(groupCallId, groupId, groupName, type) {
+  if (groupCallState || activeCall) { alert('Already in a call.'); return; }
+  let localStream;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+  } catch (err) {
+    alert('Could not access ' + (type === 'video' ? 'camera/microphone' : 'microphone') + ': ' + err.message);
+    return;
+  }
+  try {
+    await apiCall('joinGroupCall', { groupCallId, userId: currentUser.userId, userName: currentUser.name, userPhoto: currentUser.photoURL || '' });
+    beginGroupCallSession(groupCallId, groupId, groupName, type, localStream);
+
+    const res = await apiCall('getGroupCallParticipants', { groupCallId });
+    res.participants.forEach(p => {
+      if (p.userId === currentUser.userId) return;
+      connectToGroupPeer(p.userId, p.userName, p.userPhoto, true);
+    });
+  } catch (err) {
+    alert('Could not join call: ' + err.message);
+    localStream.getTracks().forEach(t => t.stop());
+  }
+}
+
+function beginGroupCallSession(groupCallId, groupId, groupName, type, localStream) {
+  groupCallState = {
+    groupCallId, groupId, groupName, type, localStream, peers: {},
+    signalInterval: null, participantsInterval: null, lastSignalCheck: new Date().toISOString(),
+    muted: false, videoOff: false,
+  };
+  renderGroupCallUI();
+  groupCallState.signalInterval = setInterval(pollGroupSignals, 1500);
+  groupCallState.participantsInterval = setInterval(pollGroupParticipants, 4000);
+}
+
+function connectToGroupPeer(peerId, peerName, peerPhoto, isInitiator) {
+  if (!groupCallState || groupCallState.peers[peerId]) return;
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  groupCallState.localStream.getTracks().forEach(t => pc.addTrack(t, groupCallState.localStream));
+
+  const peer = { pc, remoteStream: null, userName: peerName, userPhoto: peerPhoto };
+  groupCallState.peers[peerId] = peer;
+
+  pc.ontrack = (e) => { peer.remoteStream = e.streams[0]; renderGroupCallUI(); };
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      apiCall('sendGroupSignal', { groupCallId: groupCallState.groupCallId, fromUserId: currentUser.userId, toUserId: peerId, signalType: 'ice', payload: e.candidate.toJSON() }).catch(() => {});
+    }
+  };
+
+  if (isInitiator) {
+    pc.createOffer().then(offer => {
+      pc.setLocalDescription(offer);
+      apiCall('sendGroupSignal', { groupCallId: groupCallState.groupCallId, fromUserId: currentUser.userId, toUserId: peerId, signalType: 'offer', payload: offer }).catch(() => {});
+    });
+  }
+  renderGroupCallUI();
+}
+
+async function pollGroupSignals() {
+  if (!groupCallState) return;
+  try {
+    const res = await apiCall('getGroupSignals', { groupCallId: groupCallState.groupCallId, userId: currentUser.userId, since: groupCallState.lastSignalCheck });
+    groupCallState.lastSignalCheck = res.checkedAt;
+    for (const sig of res.signals) {
+      let peer = groupCallState.peers[sig.fromUserId];
+      if (sig.signalType === 'offer') {
+        if (!peer) { connectToGroupPeer(sig.fromUserId, sig.fromUserId, '', false); peer = groupCallState.peers[sig.fromUserId]; }
+        await peer.pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+        const answer = await peer.pc.createAnswer();
+        await peer.pc.setLocalDescription(answer);
+        apiCall('sendGroupSignal', { groupCallId: groupCallState.groupCallId, fromUserId: currentUser.userId, toUserId: sig.fromUserId, signalType: 'answer', payload: answer }).catch(() => {});
+      } else if (sig.signalType === 'answer' && peer) {
+        if (!peer.pc.currentRemoteDescription) await peer.pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+      } else if (sig.signalType === 'ice' && peer) {
+        try { await peer.pc.addIceCandidate(sig.payload); } catch (e) {}
+      }
+    }
+  } catch (err) { /* silent — background poll */ }
+}
+
+async function pollGroupParticipants() {
+  if (!groupCallState) return;
+  try {
+    const res = await apiCall('getGroupCallParticipants', { groupCallId: groupCallState.groupCallId });
+    const activeIds = res.participants.map(p => p.userId);
+    // connect to anyone new
+    res.participants.forEach(p => {
+      if (p.userId === currentUser.userId || groupCallState.peers[p.userId]) return;
+      connectToGroupPeer(p.userId, p.userName, p.userPhoto, true);
+    });
+    // tear down anyone who left
+    Object.keys(groupCallState.peers).forEach(peerId => {
+      if (activeIds.indexOf(peerId) === -1) {
+        groupCallState.peers[peerId].pc.close();
+        delete groupCallState.peers[peerId];
+      }
+    });
+    renderGroupCallUI();
+  } catch (err) { /* silent */ }
+}
+
+function renderGroupCallUI() {
+  if (!groupCallState) { hideCallOverlay(); return; }
+  const isVideo = groupCallState.type === 'video';
+  const peerTiles = Object.entries(groupCallState.peers).map(([id, p]) => groupCallTileHtml(p.userName, p.userPhoto, p.remoteStream, isVideo, id)).join('');
+  const selfTile = groupCallTileHtml(currentUser.name + ' (you)', currentUser.photoURL, groupCallState.localStream, isVideo && !groupCallState.videoOff, 'self', true);
+
+  showCallOverlay(`
+    <div class="group-call-box">
+      <div class="group-call-header">${escapeHtml(groupCallState.groupName)}</div>
+      <div class="group-call-grid">${selfTile}${peerTiles}</div>
+      <div class="group-call-controls">
+        <button id="gc-mute-btn">${groupCallState.muted ? '🔇 Unmute' : '🎤 Mute'}</button>
+        ${isVideo ? `<button id="gc-video-btn">${groupCallState.videoOff ? '📷 Camera on' : '📷 Camera off'}</button>` : ''}
+        <button id="gc-leave-btn" class="call-end-btn">Leave</button>
+      </div>
+    </div>`);
+
+  document.querySelectorAll('.group-call-tile video').forEach(video => {
+    const stream = video.dataset.streamOwner === 'self' ? groupCallState.localStream : (groupCallState.peers[video.dataset.streamOwner] || {}).remoteStream;
+    if (stream && video.srcObject !== stream) video.srcObject = stream;
+  });
+
+  document.getElementById('gc-mute-btn').addEventListener('click', toggleGroupCallMute);
+  const videoBtn = document.getElementById('gc-video-btn');
+  if (videoBtn) videoBtn.addEventListener('click', toggleGroupCallVideo);
+  document.getElementById('gc-leave-btn').addEventListener('click', leaveGroupCallFlow);
+}
+
+function groupCallTileHtml(name, photo, stream, showVideo, ownerId, isSelf) {
+  const hasVideoTrack = stream && showVideo;
+  return `
+    <div class="group-call-tile">
+      ${hasVideoTrack
+        ? `<video autoplay playsinline ${isSelf ? 'muted' : ''} data-stream-owner="${ownerId}"></video>`
+        : `<div class="group-call-avatar">${avatarHtml(name, photo, 64)}</div>`}
+      <div class="group-call-name">${escapeHtml(name)}</div>
+    </div>`;
+}
+
+function toggleGroupCallMute() {
+  if (!groupCallState) return;
+  groupCallState.muted = !groupCallState.muted;
+  groupCallState.localStream.getAudioTracks().forEach(t => t.enabled = !groupCallState.muted);
+  renderGroupCallUI();
+}
+
+function toggleGroupCallVideo() {
+  if (!groupCallState) return;
+  groupCallState.videoOff = !groupCallState.videoOff;
+  groupCallState.localStream.getVideoTracks().forEach(t => t.enabled = !groupCallState.videoOff);
+  renderGroupCallUI();
+}
+
+async function leaveGroupCallFlow() {
+  if (!groupCallState) return;
+  const groupCallId = groupCallState.groupCallId;
+  clearInterval(groupCallState.signalInterval);
+  clearInterval(groupCallState.participantsInterval);
+  Object.values(groupCallState.peers).forEach(p => p.pc.close());
+  groupCallState.localStream.getTracks().forEach(t => t.stop());
+  groupCallState = null;
+  hideCallOverlay();
+  try { await apiCall('leaveGroupCall', { groupCallId, userId: currentUser.userId }); } catch (err) { /* ignore */ }
+}
+
+function showIncomingGroupCallOverlay(call) {
+  if (groupCallState || activeCall || incomingCallOverlayShown) return; // already busy
+  incomingCallOverlayShown = call.groupCallId;
+  startRingtone();
+  const declineTimeout = setTimeout(() => { if (incomingCallOverlayShown === call.groupCallId) declineGroupCall(call); }, 30000);
+
+  showCallOverlay(`
+    <div class="call-box">
+      <div class="call-avatar">👥</div>
+      <div class="call-name">${escapeHtml(call.groupName)}</div>
+      <div class="call-status">${escapeHtml(call.callerName)} started a ${call.type} call…</div>
+      <div class="call-actions">
+        <button id="gc-accept-btn" class="call-accept-btn">Join</button>
+        <button id="gc-decline-btn" class="call-end-btn">Decline</button>
+      </div>
+    </div>`);
+  document.getElementById('gc-accept-btn').addEventListener('click', () => {
+    clearTimeout(declineTimeout);
+    incomingCallOverlayShown = null;
+    stopRingtone();
+    joinGroupCallFlow(call.groupCallId, call.groupId, call.groupName, call.type);
+  });
+  document.getElementById('gc-decline-btn').addEventListener('click', () => { clearTimeout(declineTimeout); declineGroupCall(call); });
+}
+
+async function declineGroupCall(call) {
+  incomingCallOverlayShown = null;
+  stopRingtone();
+  hideCallOverlay();
+  try { await apiCall('leaveGroupCall', { groupCallId: call.groupCallId, userId: currentUser.userId }); } catch (err) { /* ignore */ }
+}
+
 async function openManageGroupModal() {
   const existing = document.getElementById('manage-group-overlay');
   if (existing) existing.remove();
@@ -2576,19 +2854,21 @@ function showInAppToast(title, body, item) {
   const toast = document.createElement('div');
   toast.className = 'toast-notification';
   toast.innerHTML = `<strong>${escapeHtml(title)}</strong><div>${escapeHtml(body)}</div>`;
-  toast.addEventListener('click', () => { handleActivityClick(item); toast.remove(); });
+  if (item) toast.addEventListener('click', () => { handleActivityClick(item); toast.remove(); });
+  else toast.addEventListener('click', () => toast.remove());
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 6000);
 }
 
 function handleActivityClick(item) {
+  if (!item) return;
   if ((item.type === 'dm_message' || item.type === 'mention_message') && item.partnerId) {
     currentTab = 'inbox';
     selectedFriend = { userId: item.partnerId, name: item.partnerName };
   } else if ((item.type === 'group_message' || item.type === 'mention_message') && item.groupId) {
     currentTab = 'inbox';
     selectedFriend = { userId: item.groupId, name: item.groupName, isGroup: true };
-  } else if (item.type === 'mention_post' || item.type === 'mention_comment') {
+  } else if (item.type === 'mention_post' || item.type === 'mention_comment' || item.type === 'comment_on_post' || item.type === 'friend_story') {
     currentTab = 'feed';
     selectedFriend = null;
   } else {
