@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>चिल्लाक्स हाउस</title>
+<title>Community</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -360,7 +360,7 @@ input, textarea { font-family: inherit; }
       <div class="globe-line globe-lon globe-lon-2"></div>
     </div>
   </div>
-  <div class="splash-brand">चिल्लाक्स हाउस</div>
+  <div class="splash-brand">Community</div>
   <div class="splash-tagline">Connect everyone, everywhere.</div>
 </div>
 <div id="root"></div>
@@ -388,7 +388,7 @@ function showFatalError(message) {
 }
 
 const CONFIG_KEY = 'nexus_api_url';
-const USER_KEY = 'nexus_चिल्लाक्स हाउस_user';
+const USER_KEY = 'nexus_community_user';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxbI2l7s8erxJlKYHnYL-syBI5v4ZRo1v_CEWhhFlIoqsi8hUWFr9L842AdfIYlaTJ9pA/exec';
 // Always sync to DEFAULT_API_URL — overwrites any stale URL saved from a previous version of this file
 const previousApiUrl = localStorage.getItem(CONFIG_KEY);
@@ -405,10 +405,10 @@ let feedPosts = [];
 let feedHasMore = true;
 let feedInterval = null;
 
-// Generalized conversation state — used for both the चिल्लाक्स हाउस room ("general")
+// Generalized conversation state — used for both the community room ("general")
 // and 1:1 DM threads (conversationId = dm_<sortedUserIds>)
 let activeConversationId = 'general';
-let activeConversationTitle = null; // null = चिल्लाक्स हाउस chat; else the friend's name (DM)
+let activeConversationTitle = null; // null = community chat; else the friend's name (DM)
 let conversationMessages = [];
 let conversationLastTimestamp = null;
 let conversationInterval = null;
@@ -440,7 +440,17 @@ let unreadNotificationCount = 0;
 let bellDropdownOpen = false;
 
 // Calls (WebRTC, signaled via polling the Apps Script sheet)
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+// STUN alone frequently fails to connect across different network types
+// (mobile data <-> wifi, different ISPs, corporate NATs) — a TURN server
+// relays media when a direct peer-to-peer path can't be established.
+// Using the free Open Relay Project TURN service here.
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+];
 let activeCall = null; // { callId, role, type, pc, localStream, candidateSeen, statusInterval, startedAt }
 
 /* ============================================================
@@ -621,7 +631,7 @@ function setupScreenHtml() {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चिल्लाक्स हाउस</h1>
+      <h1 class="card-title">Community</h1>
       <p class="card-subtitle">Paste your Apps Script Web app URL to connect this app to your Google Sheet database.</p>
       <form class="card-form" id="setup-form">
         <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec" required />
@@ -680,7 +690,7 @@ function authScreenHtml(mode) {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चिल्लाक्स हाउस</h1>
+      <h1 class="card-title">Community</h1>
       <p class="card-subtitle">${mode === 'login' ? 'Welcome back.' : 'Create your account.'}</p>
       <form class="card-form" id="auth-form">
         ${mode === 'signup' ? `<input type="text" id="auth-name" placeholder="Full name" required />` : ''}
@@ -742,7 +752,7 @@ function appShellHtml() {
   <div class="app">
     <nav class="navbar">
       <div class="nav-left">
-        <span class="brand">चिल्लाक्स हाउस</span>
+        <span class="brand">Community</span>
         <div class="nav-tabs">
           <button id="tab-feed" class="${currentTab === 'feed' ? 'active' : ''}">Feed</button>
           <button id="tab-reels" class="${currentTab === 'reels' ? 'active' : ''}">Reels</button>
@@ -883,7 +893,7 @@ function renderFeedPanel() {
       </div>
       ${showingSaved ? '' : `
       <div class="create-post">
-        <textarea id="new-post-text" placeholder="Share something with the चिल्लाक्स हाउस…" rows="3"></textarea>
+        <textarea id="new-post-text" placeholder="Share something with the community…" rows="3"></textarea>
         <div class="create-post-row">
           <label class="file-btn">
             <span id="new-post-filename">Add photo</span>
@@ -1188,7 +1198,7 @@ function attachFeedHandlers() {
     btn.addEventListener('click', async () => {
       const postId = btn.dataset.postId;
       const post = feedPosts.find(p => p.postId === postId);
-      const shareText = `${post.authorName} on चिल्लाक्स हाउस: ${post.text || '(photo)'}`;
+      const shareText = `${post.authorName} on Community: ${post.text || '(photo)'}`;
       try {
         if (navigator.share) {
           await navigator.share({ text: shareText });
@@ -1326,7 +1336,7 @@ function attachCommentOwnerHandlers(container, postId) {
 }
 
 /* ============================================================
-   Chat (generalized — powers both the चिल्लाक्स हाउस room and DMs)
+   Chat (generalized — powers both the community room and DMs)
    ============================================================ */
 let currentTypingUsers = [];
 
@@ -1454,7 +1464,7 @@ function chatBubbleHtml(m) {
 }
 
 function conversationKind(conversationId) {
-  if (conversationId === 'general') return 'चिल्लाक्स हाउस';
+  if (conversationId === 'general') return 'community';
   if (conversationId.startsWith('dm_')) return 'dm';
   if (conversationId.startsWith('group_')) return 'group';
   return 'unknown';
@@ -1484,7 +1494,7 @@ function renderChatPanel() {
         <span>📞 ${escapeHtml(activeGroupCallBanner.callerName)} started a ${activeGroupCallBanner.type} call</span>
         <button id="join-group-call-banner-btn">Join</button>
       </div>` : ''}` : '';
-  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the चिल्लाक्स हाउस…';
+  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the community…';
 
   panel.innerHTML = `
     <div class="chat">
@@ -2527,7 +2537,7 @@ function connectToGroupPeer(peerId, peerName, peerPhoto, isInitiator) {
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   groupCallState.localStream.getTracks().forEach(t => pc.addTrack(t, groupCallState.localStream));
 
-  const peer = { pc, remoteStream: null, userName: peerName, userPhoto: peerPhoto };
+  const peer = { pc, remoteStream: null, userName: peerName, userPhoto: peerPhoto, candidateQueue: [] };
   groupCallState.peers[peerId] = peer;
 
   pc.ontrack = (e) => { peer.remoteStream = e.streams[0]; renderGroupCallUI(); };
@@ -2546,6 +2556,23 @@ function connectToGroupPeer(peerId, peerName, peerPhoto, isInitiator) {
   renderGroupCallUI();
 }
 
+async function addGroupIceCandidate(peer, candidate) {
+  // queue it if the remote description isn't set yet — adding too early throws
+  // and the candidate would otherwise be silently lost, breaking connectivity
+  if (!peer.pc.remoteDescription || !peer.pc.remoteDescription.type) {
+    peer.candidateQueue.push(candidate);
+    return;
+  }
+  try { await peer.pc.addIceCandidate(candidate); } catch (e) { /* ignore malformed/duplicate candidates */ }
+}
+
+async function flushGroupCandidateQueue(peer) {
+  const queued = peer.candidateQueue.splice(0, peer.candidateQueue.length);
+  for (const c of queued) {
+    try { await peer.pc.addIceCandidate(c); } catch (e) { /* ignore */ }
+  }
+}
+
 async function pollGroupSignals() {
   if (!groupCallState) return;
   try {
@@ -2556,13 +2583,17 @@ async function pollGroupSignals() {
       if (sig.signalType === 'offer') {
         if (!peer) { connectToGroupPeer(sig.fromUserId, sig.fromUserId, '', false); peer = groupCallState.peers[sig.fromUserId]; }
         await peer.pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+        await flushGroupCandidateQueue(peer);
         const answer = await peer.pc.createAnswer();
         await peer.pc.setLocalDescription(answer);
         apiCall('sendGroupSignal', { groupCallId: groupCallState.groupCallId, fromUserId: currentUser.userId, toUserId: sig.fromUserId, signalType: 'answer', payload: answer }).catch(() => {});
       } else if (sig.signalType === 'answer' && peer) {
-        if (!peer.pc.currentRemoteDescription) await peer.pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+        if (!peer.pc.currentRemoteDescription) {
+          await peer.pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+          await flushGroupCandidateQueue(peer);
+        }
       } else if (sig.signalType === 'ice' && peer) {
-        try { await peer.pc.addIceCandidate(sig.payload); } catch (e) {}
+        await addGroupIceCandidate(peer, sig.payload);
       }
     }
   } catch (err) { /* silent — background poll */ }
