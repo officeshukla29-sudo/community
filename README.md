@@ -343,6 +343,7 @@ input, textarea { font-family: inherit; }
 .call-end-btn { background: var(--danger); color: #fff; border: none; border-radius: 24px; padding: 12px 28px; font-size: 14px; font-weight: 600; }
 
 .call-box-video { position: relative; width: 100%; max-width: 600px; height: 80vh; max-height: 640px; }
+.call-box-video audio { display: none; }
 .remote-video { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; background: #000; }
 .local-video { position: absolute; bottom: 90px; right: 12px; width: 110px; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #fff; background: #000; }
 .call-controls { position: absolute; bottom: 16px; left: 0; right: 0; display: flex; justify-content: center; }
@@ -2300,12 +2301,23 @@ async function initiateCall(calleeId, calleeName, type) {
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-  activeCall = { callId: null, role: 'caller', type, pc, localStream, remoteStream: null, seenCandidates: 0, statusInterval: null, startedAt: null };
+  activeCall = { callId: null, role: 'caller', type, pc, localStream, remoteStream: null, seenCandidates: 0, statusInterval: null, startedAt: null, pendingCandidates: [], polling: false };
 
   pc.ontrack = (e) => { activeCall.remoteStream = e.streams[0]; attachRemoteStreamIfReady(); };
+  pc.oniceconnectionstatechange = () => {
+    if (pc.iceConnectionState === 'failed' && activeCall) {
+      showCallEndedMessage('Connection failed — check your network and try again.');
+    }
+  };
+  // ICE gathering starts as soon as setLocalDescription() runs below — well
+  // before startCall() resolves with a callId. Candidates that arrive in that
+  // window are queued here instead of being silently dropped.
   pc.onicecandidate = (e) => {
-    if (e.candidate && activeCall && activeCall.callId) {
+    if (!e.candidate || !activeCall) return;
+    if (activeCall.callId) {
       apiCall('addIceCandidate', { callId: activeCall.callId, role: 'caller', candidate: e.candidate.toJSON() }).catch(() => {});
+    } else {
+      activeCall.pendingCandidates.push(e.candidate.toJSON());
     }
   };
 
@@ -2321,6 +2333,9 @@ async function initiateCall(calleeId, calleeName, type) {
       calleeId, calleeName, type, offerSDP: offer,
     });
     activeCall.callId = res.callId;
+    // flush any candidates gathered before we had a callId to send them with
+    const queued = activeCall.pendingCandidates.splice(0, activeCall.pendingCandidates.length);
+    queued.forEach(c => apiCall('addIceCandidate', { callId: activeCall.callId, role: 'caller', candidate: c }).catch(() => {}));
     startRingback();
   } catch (err) {
     alert('Could not start call: ' + err.message);
@@ -2328,28 +2343,36 @@ async function initiateCall(calleeId, calleeName, type) {
     return;
   }
 
-  activeCall.statusInterval = setInterval(() => pollOutgoingCall(calleeName, type), 1200);
+  activeCall.statusInterval = setInterval(() => pollOutgoingCall(calleeName, type), 1500);
 }
 
 async function pollOutgoingCall(calleeName, type) {
-  if (!activeCall || !activeCall.callId) return;
-  const res = await apiCall('getCall', { callId: activeCall.callId });
-  const call = res.call;
-  if (!call || !activeCall) return;
+  if (!activeCall || !activeCall.callId || activeCall.polling) return; // skip if the previous poll hasn't finished yet
+  activeCall.polling = true;
+  try {
+    const res = await apiCall('getCall', { callId: activeCall.callId });
+    const call = res.call;
+    if (!call || !activeCall) return;
 
-  if (call.status === 'accepted' && !activeCall.pc.currentRemoteDescription) {
-    stopRingback();
-    await activeCall.pc.setRemoteDescription(new RTCSessionDescription(call.answerSDP));
-    activeCall.startedAt = Date.now();
-    renderActiveCallUI(calleeName, type);
+    if (call.status === 'accepted' && !activeCall.pc.currentRemoteDescription) {
+      stopRingback();
+      await activeCall.pc.setRemoteDescription(new RTCSessionDescription(call.answerSDP));
+      activeCall.startedAt = Date.now();
+      renderActiveCallUI(calleeName, type);
+    }
+    if (call.status === 'rejected') { stopRingback(); showCallEndedMessage(calleeName + ' declined the call.'); return; }
+    if (call.status === 'ended') { stopRingback(); showCallEndedMessage('Call ended.'); return; }
+
+    // add any new candidates from the callee side — each wrapped individually
+    // so one bad/duplicate candidate can't block the rest from this batch
+    const newOnes = call.calleeCandidates.slice(activeCall.seenCandidates);
+    for (const c of newOnes) { try { await activeCall.pc.addIceCandidate(c); } catch (e) { /* ignore malformed/duplicate */ } }
+    activeCall.seenCandidates = call.calleeCandidates.length;
+  } catch (err) {
+    /* network hiccup on this poll — next tick will retry */
+  } finally {
+    if (activeCall) activeCall.polling = false;
   }
-  if (call.status === 'rejected') { stopRingback(); showCallEndedMessage(calleeName + ' declined the call.'); return; }
-  if (call.status === 'ended') { stopRingback(); showCallEndedMessage('Call ended.'); return; }
-
-  // add any new candidates from the callee side
-  const newOnes = call.calleeCandidates.slice(activeCall.seenCandidates);
-  for (const c of newOnes) { try { await activeCall.pc.addIceCandidate(c); } catch (e) {} }
-  activeCall.seenCandidates = call.calleeCandidates.length;
 }
 
 async function answerIncomingCall(call) {
@@ -2369,9 +2392,14 @@ async function answerIncomingCall(call) {
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-  activeCall = { callId: call.callId, role: 'callee', type: call.type, pc, localStream, remoteStream: null, seenCandidates: 0, statusInterval: null, startedAt: Date.now() };
+  activeCall = { callId: call.callId, role: 'callee', type: call.type, pc, localStream, remoteStream: null, seenCandidates: 0, statusInterval: null, startedAt: Date.now(), polling: false };
 
   pc.ontrack = (e) => { activeCall.remoteStream = e.streams[0]; attachRemoteStreamIfReady(); };
+  pc.oniceconnectionstatechange = () => {
+    if (pc.iceConnectionState === 'failed' && activeCall) {
+      showCallEndedMessage('Connection failed — check your network and try again.');
+    }
+  };
   pc.onicecandidate = (e) => {
     if (e.candidate && activeCall) {
       apiCall('addIceCandidate', { callId: call.callId, role: 'callee', candidate: e.candidate.toJSON() }).catch(() => {});
@@ -2384,27 +2412,34 @@ async function answerIncomingCall(call) {
   await apiCall('answerCall', { callId: call.callId, answerSDP: answer });
 
   renderActiveCallUI(call.callerName, call.type);
-  activeCall.statusInterval = setInterval(() => pollActiveCallForHangupAndCandidates(call.callerName), 1200);
+  activeCall.statusInterval = setInterval(() => pollActiveCallForHangupAndCandidates(call.callerName), 1500);
 }
 
 async function pollActiveCallForHangupAndCandidates() {
-  if (!activeCall || !activeCall.callId) return;
-  const res = await apiCall('getCall', { callId: activeCall.callId });
-  const call = res.call;
-  if (!call || !activeCall) return;
-  if (call.status === 'ended') { showCallEndedMessage('Call ended.'); return; }
+  if (!activeCall || !activeCall.callId || activeCall.polling) return;
+  activeCall.polling = true;
+  try {
+    const res = await apiCall('getCall', { callId: activeCall.callId });
+    const call = res.call;
+    if (!call || !activeCall) return;
+    if (call.status === 'ended') { showCallEndedMessage('Call ended.'); return; }
 
-  const newOnes = call.callerCandidates.slice(activeCall.seenCandidates);
-  for (const c of newOnes) { try { await activeCall.pc.addIceCandidate(c); } catch (e) {} }
-  activeCall.seenCandidates = call.callerCandidates.length;
+    const newOnes = call.callerCandidates.slice(activeCall.seenCandidates);
+    for (const c of newOnes) { try { await activeCall.pc.addIceCandidate(c); } catch (e) { /* ignore malformed/duplicate */ } }
+    activeCall.seenCandidates = call.callerCandidates.length;
+  } catch (err) {
+    /* network hiccup on this poll — next tick will retry */
+  } finally {
+    if (activeCall) activeCall.polling = false;
+  }
 }
 
 function attachRemoteStreamIfReady() {
   if (!activeCall || !activeCall.remoteStream) return;
   const remoteVideo = document.getElementById('remote-video');
   const remoteAudio = document.getElementById('remote-audio');
-  if (remoteVideo) remoteVideo.srcObject = activeCall.remoteStream;
-  if (remoteAudio) remoteAudio.srcObject = activeCall.remoteStream;
+  if (remoteVideo) { remoteVideo.srcObject = activeCall.remoteStream; remoteVideo.play().catch(() => {}); }
+  if (remoteAudio) { remoteAudio.srcObject = activeCall.remoteStream; remoteAudio.play().catch(() => {}); }
 }
 
 function renderOutgoingCallUI(name, type) {
@@ -2423,7 +2458,8 @@ function renderActiveCallUI(name, type) {
   if (type === 'video') {
     showCallOverlay(`
       <div class="call-box call-box-video">
-        <video id="remote-video" autoplay playsinline class="remote-video"></video>
+        <video id="remote-video" autoplay playsinline muted class="remote-video"></video>
+        <audio id="remote-audio" autoplay></audio>
         <video id="local-video" autoplay playsinline muted class="local-video"></video>
         <div class="call-controls">
           <button id="call-hangup-btn" class="call-end-btn">End call</button>
@@ -2525,7 +2561,7 @@ function beginGroupCallSession(groupCallId, groupId, groupName, type, localStrea
   groupCallState = {
     groupCallId, groupId, groupName, type, localStream, peers: {},
     signalInterval: null, participantsInterval: null, lastSignalCheck: new Date().toISOString(),
-    muted: false, videoOff: false,
+    muted: false, videoOff: false, signalPolling: false, participantsPolling: false,
   };
   renderGroupCallUI();
   groupCallState.signalInterval = setInterval(pollGroupSignals, 1500);
@@ -2546,10 +2582,14 @@ function connectToGroupPeer(peerId, peerName, peerPhoto, isInitiator) {
       apiCall('sendGroupSignal', { groupCallId: groupCallState.groupCallId, fromUserId: currentUser.userId, toUserId: peerId, signalType: 'ice', payload: e.candidate.toJSON() }).catch(() => {});
     }
   };
+  // helps spot connections that never establish, instead of failing silently
+  pc.oniceconnectionstatechange = () => {
+    if (['failed', 'disconnected'].includes(pc.iceConnectionState) && groupCallState) renderGroupCallUI();
+  };
 
   if (isInitiator) {
-    pc.createOffer().then(offer => {
-      pc.setLocalDescription(offer);
+    pc.createOffer().then(async (offer) => {
+      await pc.setLocalDescription(offer);
       apiCall('sendGroupSignal', { groupCallId: groupCallState.groupCallId, fromUserId: currentUser.userId, toUserId: peerId, signalType: 'offer', payload: offer }).catch(() => {});
     });
   }
@@ -2574,33 +2614,40 @@ async function flushGroupCandidateQueue(peer) {
 }
 
 async function pollGroupSignals() {
-  if (!groupCallState) return;
+  if (!groupCallState || groupCallState.signalPolling) return; // skip if the previous poll hasn't finished yet
+  groupCallState.signalPolling = true;
   try {
     const res = await apiCall('getGroupSignals', { groupCallId: groupCallState.groupCallId, userId: currentUser.userId, since: groupCallState.lastSignalCheck });
     groupCallState.lastSignalCheck = res.checkedAt;
     for (const sig of res.signals) {
-      let peer = groupCallState.peers[sig.fromUserId];
-      if (sig.signalType === 'offer') {
-        if (!peer) { connectToGroupPeer(sig.fromUserId, sig.fromUserId, '', false); peer = groupCallState.peers[sig.fromUserId]; }
-        await peer.pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
-        await flushGroupCandidateQueue(peer);
-        const answer = await peer.pc.createAnswer();
-        await peer.pc.setLocalDescription(answer);
-        apiCall('sendGroupSignal', { groupCallId: groupCallState.groupCallId, fromUserId: currentUser.userId, toUserId: sig.fromUserId, signalType: 'answer', payload: answer }).catch(() => {});
-      } else if (sig.signalType === 'answer' && peer) {
-        if (!peer.pc.currentRemoteDescription) {
+      // each signal is isolated — one bad/duplicate/out-of-order signal
+      // must not block the rest of this batch from being processed
+      try {
+        let peer = groupCallState.peers[sig.fromUserId];
+        if (sig.signalType === 'offer') {
+          if (!peer) { connectToGroupPeer(sig.fromUserId, sig.fromUserId, '', false); peer = groupCallState.peers[sig.fromUserId]; }
           await peer.pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
           await flushGroupCandidateQueue(peer);
+          const answer = await peer.pc.createAnswer();
+          await peer.pc.setLocalDescription(answer);
+          apiCall('sendGroupSignal', { groupCallId: groupCallState.groupCallId, fromUserId: currentUser.userId, toUserId: sig.fromUserId, signalType: 'answer', payload: answer }).catch(() => {});
+        } else if (sig.signalType === 'answer' && peer) {
+          if (!peer.pc.currentRemoteDescription) {
+            await peer.pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+            await flushGroupCandidateQueue(peer);
+          }
+        } else if (sig.signalType === 'ice' && peer) {
+          await addGroupIceCandidate(peer, sig.payload);
         }
-      } else if (sig.signalType === 'ice' && peer) {
-        await addGroupIceCandidate(peer, sig.payload);
-      }
+      } catch (sigErr) { /* this specific signal failed — move on to the next one */ }
     }
-  } catch (err) { /* silent — background poll */ }
+  } catch (err) { /* silent — background poll, next tick retries */ }
+  finally { if (groupCallState) groupCallState.signalPolling = false; }
 }
 
 async function pollGroupParticipants() {
-  if (!groupCallState) return;
+  if (!groupCallState || groupCallState.participantsPolling) return;
+  groupCallState.participantsPolling = true;
   try {
     const res = await apiCall('getGroupCallParticipants', { groupCallId: groupCallState.groupCallId });
     const activeIds = res.participants.map(p => p.userId);
@@ -2618,6 +2665,7 @@ async function pollGroupParticipants() {
     });
     renderGroupCallUI();
   } catch (err) { /* silent */ }
+  finally { if (groupCallState) groupCallState.participantsPolling = false; }
 }
 
 function renderGroupCallUI() {
