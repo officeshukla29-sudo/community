@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>चिल्लाक्स हाउस</title>
+<title>Community</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -96,6 +96,21 @@ input, textarea { font-family: inherit; }
 .reel-like-btn { align-self: flex-start; background: rgba(255,255,255,0.15); border: none; border-radius: 20px; padding: 6px 14px; color: #fff; font-size: 13px; }
 .reel-like-btn.active { background: var(--danger); }
 .load-more-reel-btn { display: block; margin: 16px auto; background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; }
+.reel-owner-actions { margin-left: auto; display: flex; gap: 4px; }
+.reel-owner-actions button { background: rgba(255,255,255,0.15); border: none; border-radius: 6px; padding: 3px 6px; font-size: 12px; }
+.reel-author { display: flex; align-items: center; gap: 8px; }
+
+.clickable-author { cursor: pointer; }
+.clickable-author:hover { opacity: 0.8; }
+
+.profile-view-box { max-width: 460px; max-height: 82vh; overflow-y: auto; position: relative; }
+.profile-view-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 16px; color: var(--ink-soft); }
+.profile-view-header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.profile-view-name { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: var(--indigo-dark); }
+.profile-view-bio { font-size: 13px; color: var(--ink-soft); max-width: 320px; }
+.profile-view-actions { margin-top: 6px; }
+.profile-posts-heading { font-family: 'Fraunces', serif; font-size: 15px; margin: 0 0 12px; color: var(--indigo-dark); }
+.profile-view-posts .post-card { margin-bottom: 12px; }
 
 /* Polls / quizzes */
 .poll-bubble { min-width: 220px; }
@@ -368,7 +383,7 @@ input, textarea { font-family: inherit; }
       <div class="globe-line globe-lon globe-lon-2"></div>
     </div>
   </div>
-  <div class="splash-brand">चिल्लाक्स हाउस</div>
+  <div class="splash-brand">Community</div>
   <div class="splash-tagline">Connect everyone, everywhere.</div>
 </div>
 <div id="root"></div>
@@ -396,7 +411,7 @@ function showFatalError(message) {
 }
 
 const CONFIG_KEY = 'nexus_api_url';
-const USER_KEY = 'nexus_चिल्लाक्स हाउस_user';
+const USER_KEY = 'nexus_community_user';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxbI2l7s8erxJlKYHnYL-syBI5v4ZRo1v_CEWhhFlIoqsi8hUWFr9L842AdfIYlaTJ9pA/exec';
 // Always sync to DEFAULT_API_URL — overwrites any stale URL saved from a previous version of this file
 const previousApiUrl = localStorage.getItem(CONFIG_KEY);
@@ -413,10 +428,10 @@ let feedPosts = [];
 let feedHasMore = true;
 let feedInterval = null;
 
-// Generalized conversation state — used for both the चिल्लाक्स हाउस room ("general")
+// Generalized conversation state — used for both the community room ("general")
 // and 1:1 DM threads (conversationId = dm_<sortedUserIds>)
 let activeConversationId = 'general';
-let activeConversationTitle = null; // null = चिल्लाक्स हाउस chat; else the friend's name (DM)
+let activeConversationTitle = null; // null = community chat; else the friend's name (DM)
 let conversationMessages = [];
 let conversationLastTimestamp = null;
 let conversationInterval = null;
@@ -640,7 +655,7 @@ function setupScreenHtml() {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चिल्लाक्स हाउस</h1>
+      <h1 class="card-title">Community</h1>
       <p class="card-subtitle">Paste your Apps Script Web app URL to connect this app to your Google Sheet database.</p>
       <form class="card-form" id="setup-form">
         <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec" required />
@@ -699,7 +714,7 @@ function authScreenHtml(mode) {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चिल्लाक्स हाउस</h1>
+      <h1 class="card-title">Community</h1>
       <p class="card-subtitle">${mode === 'login' ? 'Welcome back.' : 'Create your account.'}</p>
       <form class="card-form" id="auth-form">
         ${mode === 'signup' ? `<input type="text" id="auth-name" placeholder="Full name" required />` : ''}
@@ -761,7 +776,7 @@ function appShellHtml() {
   <div class="app">
     <nav class="navbar">
       <div class="nav-left">
-        <span class="brand">चिल्लाक्स हाउस</span>
+        <span class="brand">Community</span>
         <div class="nav-tabs">
           <button id="tab-feed" class="${currentTab === 'feed' ? 'active' : ''}">Feed</button>
           <button id="tab-reels" class="${currentTab === 'reels' ? 'active' : ''}">Reels</button>
@@ -789,7 +804,7 @@ function attachShellHandlers() {
   document.getElementById('tab-chat').addEventListener('click', () => { currentTab = 'chat'; render(); });
   document.getElementById('tab-people').addEventListener('click', () => { currentTab = 'people'; render(); });
   document.getElementById('tab-inbox').addEventListener('click', () => { currentTab = 'inbox'; render(); });
-  document.getElementById('profile-open-btn').addEventListener('click', openProfileModal);
+  document.getElementById('profile-open-btn').addEventListener('click', () => openUserProfile(currentUser.userId));
   document.getElementById('bell-btn').addEventListener('click', toggleBellDropdown);
   document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.removeItem(USER_KEY);
@@ -859,10 +874,12 @@ function postCardHtml(post) {
   return `
   <article class="post-card" data-post-id="${post.postId}">
     <header class="post-header">
-      ${avatarHtml(post.authorName, post.authorPhoto)}
-      <div class="post-header-info">
-        <div class="post-author">${escapeHtml(post.authorName)}</div>
-        <div class="post-time">${post.createdAt ? new Date(post.createdAt).toLocaleString() : 'just now'}</div>
+      <div class="clickable-author" data-user-id="${post.authorId}">
+        ${avatarHtml(post.authorName, post.authorPhoto)}
+        <div class="post-header-info">
+          <div class="post-author">${escapeHtml(post.authorName)}</div>
+          <div class="post-time">${post.createdAt ? new Date(post.createdAt).toLocaleString() : 'just now'}</div>
+        </div>
       </div>
       ${isMine ? `
         <div class="post-owner-actions">
@@ -902,7 +919,7 @@ function renderFeedPanel() {
       </div>
       ${showingSaved ? '' : `
       <div class="create-post">
-        <textarea id="new-post-text" placeholder="Share something with the चिल्लाक्स हाउस…" rows="3"></textarea>
+        <textarea id="new-post-text" placeholder="Share something with the community…" rows="3"></textarea>
         <div class="create-post-row">
           <label class="file-btn">
             <span id="new-post-filename">Add photo</span>
@@ -955,14 +972,48 @@ function renderReelsList() {
       } catch (err) { console.error(err); }
     });
   });
+
+  document.querySelectorAll('.edit-reel-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const reelId = btn.dataset.reelId;
+      const reel = reelsList.find(r => r.reelId === reelId);
+      const newCaption = prompt('Edit caption:', reel.caption || '');
+      if (newCaption === null) return;
+      try {
+        await apiCall('updateReel', { reelId, userId: currentUser.userId, caption: newCaption.trim() });
+        reel.caption = newCaption.trim();
+        renderReelsList();
+      } catch (err) { alert(err.message); }
+    });
+  });
+
+  document.querySelectorAll('.delete-reel-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this reel?')) return;
+      const reelId = btn.dataset.reelId;
+      try {
+        await apiCall('deleteReel', { reelId, userId: currentUser.userId });
+        reelsList = reelsList.filter(r => r.reelId !== reelId);
+        renderReelsList();
+      } catch (err) { alert(err.message); }
+    });
+  });
 }
 
 function reelCardHtml(reel) {
+  const isMine = reel.authorId === currentUser.userId;
   return `
   <div class="reel-card">
     <iframe src="${reel.videoURL}" class="reel-video" allow="autoplay"></iframe>
     <div class="reel-overlay">
-      <div class="reel-author">${avatarHtml(reel.authorName, reel.authorPhoto, 32)}<span>${escapeHtml(reel.authorName)}</span></div>
+      <div class="reel-author">
+        <span class="clickable-author" data-user-id="${reel.authorId}">${avatarHtml(reel.authorName, reel.authorPhoto, 32)}<span>${escapeHtml(reel.authorName)}</span></span>
+        ${isMine ? `
+          <span class="reel-owner-actions">
+            <button class="edit-reel-btn" data-reel-id="${reel.reelId}" title="Edit caption">✏️</button>
+            <button class="delete-reel-btn" data-reel-id="${reel.reelId}" title="Delete">🗑️</button>
+          </span>` : ''}
+      </div>
       ${reel.caption ? `<div class="reel-caption">${linkify(escapeHtml(reel.caption))}</div>` : ''}
       <button class="reel-like-btn ${reel.liked ? 'active' : ''}" data-reel-id="${reel.reelId}">❤️ <span class="reel-like-count">${reel.likeCount || 0}</span></button>
     </div>
@@ -1207,7 +1258,7 @@ function attachFeedHandlers() {
     btn.addEventListener('click', async () => {
       const postId = btn.dataset.postId;
       const post = feedPosts.find(p => p.postId === postId);
-      const shareText = `${post.authorName} on चिल्लाक्स हाउस: ${post.text || '(photo)'}`;
+      const shareText = `${post.authorName} on Community: ${post.text || '(photo)'}`;
       try {
         if (navigator.share) {
           await navigator.share({ text: shareText });
@@ -1286,9 +1337,9 @@ function attachFeedHandlers() {
 function commentHtml(c) {
   const isMine = c.authorId === currentUser.userId;
   return `<div class="comment" data-comment-id="${c.commentId}">
-    ${avatarHtml(c.authorName, c.authorPhoto, 24)}
+    <span class="clickable-author" data-user-id="${c.authorId}">${avatarHtml(c.authorName, c.authorPhoto, 24)}</span>
     <div class="comment-body">
-      <span class="comment-author">${escapeHtml(c.authorName)}</span> ${linkify(escapeHtml(c.text))}
+      <span class="comment-author clickable-author" data-user-id="${c.authorId}">${escapeHtml(c.authorName)}</span> ${linkify(escapeHtml(c.text))}
       ${isMine ? `<span class="comment-owner-actions"><button class="edit-comment-btn" data-comment-id="${c.commentId}" data-post-id="${c.postId}">✏️</button><button class="delete-comment-btn" data-comment-id="${c.commentId}" data-post-id="${c.postId}">🗑️</button></span>` : ''}
     </div>
   </div>`;
@@ -1345,7 +1396,7 @@ function attachCommentOwnerHandlers(container, postId) {
 }
 
 /* ============================================================
-   Chat (generalized — powers both the चिल्लाक्स हाउस room and DMs)
+   Chat (generalized — powers both the community room and DMs)
    ============================================================ */
 let currentTypingUsers = [];
 
@@ -1389,7 +1440,7 @@ function enterConversation(conversationId, title) {
   replyingTo = null;
   stopConversationPolling();
   loadConversationInitial();
-  conversationInterval = setInterval(pollConversation, 2500);
+  conversationInterval = setInterval(pollConversation, 1200);
 }
 
 function stopConversationPolling() { if (conversationInterval) { clearInterval(conversationInterval); conversationInterval = null; } }
@@ -1458,9 +1509,9 @@ function chatBubbleHtml(m) {
 
   return `
   <div class="chat-bubble-row ${mine ? 'mine' : ''} ${m._pending ? 'pending' : ''}" data-message-id="${m.messageId}">
-    ${!mine ? avatarHtml(m.senderName, m.senderPhoto, 28) : ''}
+    ${!mine ? `<span class="clickable-author" data-user-id="${m.senderId}">${avatarHtml(m.senderName, m.senderPhoto, 28)}</span>` : ''}
     <div class="chat-bubble">
-      ${!mine ? `<div class="chat-sender">${escapeHtml(m.senderName)}</div>` : ''}
+      ${!mine ? `<div class="chat-sender clickable-author" data-user-id="${m.senderId}">${escapeHtml(m.senderName)}</div>` : ''}
       ${replyPreview}
       ${m.type === 'text' ? `<p>${linkify(escapeHtml(m.text))}</p>` : mediaHtml}
       ${statusHtml}
@@ -1473,7 +1524,7 @@ function chatBubbleHtml(m) {
 }
 
 function conversationKind(conversationId) {
-  if (conversationId === 'general') return 'चिल्लाक्स हाउस';
+  if (conversationId === 'general') return 'community';
   if (conversationId.startsWith('dm_')) return 'dm';
   if (conversationId.startsWith('group_')) return 'group';
   return 'unknown';
@@ -1503,7 +1554,7 @@ function renderChatPanel() {
         <span>📞 ${escapeHtml(activeGroupCallBanner.callerName)} started a ${activeGroupCallBanner.type} call</span>
         <button id="join-group-call-banner-btn">Join</button>
       </div>` : ''}` : '';
-  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the चिल्लाक्स हाउस…';
+  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the community…';
 
   panel.innerHTML = `
     <div class="chat">
@@ -1850,10 +1901,14 @@ function cancelRecording() {
    People — search, friend requests, people you may know
    ============================================================ */
 function personCardHtml(user, actionHtml) {
+  const isClickable = !!user.userId;
+  const avatarClass = isClickable ? 'avatar-wrap clickable-author' : 'avatar-wrap';
+  const infoClass = isClickable ? 'person-info clickable-author' : 'person-info';
+  const dataAttr = isClickable ? `data-user-id="${user.userId}"` : '';
   return `
   <div class="person-card">
-    <div class="avatar-wrap">${avatarHtml(user.name, user.photoURL)}${user.userId ? onlineDotHtml(user.userId) : ''}</div>
-    <div class="person-info">
+    <div class="${avatarClass}" ${dataAttr}>${avatarHtml(user.name, user.photoURL)}${user.userId ? onlineDotHtml(user.userId) : ''}</div>
+    <div class="${infoClass}" ${dataAttr}>
       <div class="person-name">${escapeHtml(user.name)}</div>
       <div class="person-email">${escapeHtml(user.email)}</div>
     </div>
@@ -2991,6 +3046,180 @@ function handleActivityClick(item) {
 /* ============================================================
    Profile modal — edit name / bio / photo
    ============================================================ */
+/* ============================================================
+   Profile view — opens for self (from navbar) or anyone whose
+   name/avatar is clicked (posts, comments, chat, people lists)
+   ============================================================ */
+let profileViewPosts = [];
+let profileViewUserId = null;
+
+async function openUserProfile(userId) {
+  const existing = document.getElementById('profile-view-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'profile-view-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal-box profile-view-box"><p class="post-time">Loading…</p></div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  try {
+    const [profileRes, postsRes] = await Promise.all([
+      apiCall('getProfile', { userId }),
+      apiCall('getUserPosts', { userId, currentUserId: currentUser.userId }),
+    ]);
+    profileViewUserId = userId;
+    profileViewPosts = postsRes.posts;
+    renderProfileView(overlay, profileRes.user);
+  } catch (err) {
+    overlay.querySelector('.modal-box').innerHTML = `<p class="form-error">${escapeHtml(err.message)}</p><div class="modal-actions"><button class="modal-cancel-btn" onclick="document.getElementById('profile-view-overlay').remove()">Close</button></div>`;
+  }
+}
+
+function renderProfileView(overlay, user) {
+  const isMe = user.userId === currentUser.userId;
+  overlay.innerHTML = `
+    <div class="modal-box profile-view-box">
+      <button class="profile-view-close" id="profile-view-close-btn">✕</button>
+      <div class="profile-view-header">
+        ${avatarHtml(user.name, user.photoURL, 84)}
+        <div class="profile-view-name">${escapeHtml(user.name)}</div>
+        ${user.bio ? `<div class="profile-view-bio">${escapeHtml(user.bio)}</div>` : ''}
+        <div class="profile-view-actions">
+          ${isMe
+            ? `<button id="profile-view-edit-btn" class="small-action-btn">Edit profile</button>`
+            : `<button id="profile-view-message-btn" class="small-action-btn">Message</button>`}
+        </div>
+      </div>
+      <div class="profile-view-posts" id="profile-view-posts">
+        <h3 class="profile-posts-heading">Posts</h3>
+        ${profileViewPosts.length ? profileViewPosts.map(postCardHtml).join('') : '<p class="empty-state">No posts yet.</p>'}
+      </div>
+    </div>`;
+
+  document.getElementById('profile-view-close-btn').addEventListener('click', () => overlay.remove());
+  if (isMe) {
+    document.getElementById('profile-view-edit-btn').addEventListener('click', () => { overlay.remove(); openProfileModal(); });
+  } else {
+    document.getElementById('profile-view-message-btn').addEventListener('click', () => {
+      overlay.remove();
+      selectedFriend = { userId: user.userId, name: user.name };
+      currentTab = 'inbox';
+      render();
+    });
+  }
+  attachProfilePostHandlers(document.getElementById('profile-view-posts'));
+}
+
+function attachProfilePostHandlers(container) {
+  container.querySelectorAll('.reaction-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest('.reaction-row');
+      const postId = row.dataset.postId;
+      const type = btn.dataset.type;
+      try {
+        const res = await apiCall('setReaction', { postId, userId: currentUser.userId, type });
+        const post = profileViewPosts.find(p => p.postId === postId);
+        if (post) { post.reactionCounts = res.counts; post.myReaction = res.myReaction; }
+        rerenderProfilePosts();
+      } catch (err) { console.error(err); }
+    });
+  });
+
+  container.querySelectorAll('.edit-post-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postId = btn.dataset.postId;
+      const post = profileViewPosts.find(p => p.postId === postId);
+      const newText = prompt('Edit post:', post.text || '');
+      if (newText === null || newText.trim() === '') return;
+      try {
+        await apiCall('updatePost', { postId, userId: currentUser.userId, text: newText.trim() });
+        post.text = newText.trim();
+        rerenderProfilePosts();
+      } catch (err) { alert(err.message); }
+    });
+  });
+
+  container.querySelectorAll('.delete-post-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this post?')) return;
+      const postId = btn.dataset.postId;
+      try {
+        await apiCall('deletePost', { postId, userId: currentUser.userId });
+        profileViewPosts = profileViewPosts.filter(p => p.postId !== postId);
+        rerenderProfilePosts();
+      } catch (err) { alert(err.message); }
+    });
+  });
+
+  container.querySelectorAll('.comment-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postId = btn.dataset.postId;
+      const opening = !openComments[postId];
+      openComments[postId] = opening;
+      const cContainer = container.querySelector(`[data-comments-for="${postId}"]`);
+      cContainer.classList.toggle('hidden', !opening);
+      if (opening && !commentsCache[postId]) {
+        const res = await apiCall('getComments', { postId });
+        commentsCache[postId] = res.comments;
+        renderCommentsInto(cContainer, postId);
+      }
+    });
+  });
+
+  container.querySelectorAll('.comment-form').forEach(form => {
+    const input = form.querySelector('input');
+    attachMentionAutocomplete(input);
+    attachEmojiPicker(form.querySelector('.emoji-btn'), input);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const postId = form.dataset.postId;
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      const friends = await ensureFriendsCache();
+      const mentions = extractMentions(text, friends);
+      const res = await apiCall('addComment', { postId, authorId: currentUser.userId, authorName: currentUser.name, authorPhoto: currentUser.photoURL || '', text, mentions });
+      commentsCache[postId] = (commentsCache[postId] || []).concat([res.comment]);
+      renderCommentsInto(form.parentElement, postId);
+    });
+  });
+
+  container.querySelectorAll('.save-post-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postId = btn.dataset.postId;
+      try {
+        const res = await apiCall('savePost', { userId: currentUser.userId, postId });
+        const post = profileViewPosts.find(p => p.postId === postId);
+        if (post) post.saved = res.saved;
+        rerenderProfilePosts();
+      } catch (err) { alert(err.message); }
+    });
+  });
+
+  container.querySelectorAll('.share-post-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postId = btn.dataset.postId;
+      const post = profileViewPosts.find(p => p.postId === postId);
+      const shareText = `${post.authorName} on Community: ${post.text || '(photo)'}`;
+      try {
+        if (navigator.share) await navigator.share({ text: shareText });
+        else { await navigator.clipboard.writeText(shareText); alert('Post copied — paste it anywhere to share.'); }
+      } catch (err) { /* cancelled — ignore */ }
+    });
+  });
+
+  container.querySelectorAll('[data-comments-for]').forEach(c => attachCommentOwnerHandlers(c, c.dataset.commentsFor));
+}
+
+function rerenderProfilePosts() {
+  const container = document.getElementById('profile-view-posts');
+  if (!container) return;
+  container.innerHTML = `<h3 class="profile-posts-heading">Posts</h3>${profileViewPosts.length ? profileViewPosts.map(postCardHtml).join('') : '<p class="empty-state">No posts yet.</p>'}`;
+  attachProfilePostHandlers(container);
+}
+
 async function loadBlockedUsersList() {
   const res = await apiCall('getBlockedUsers', { userId: currentUser.userId });
   const box = document.getElementById('blocked-users-list');
@@ -3072,6 +3301,14 @@ function openProfileModal() {
     }
   });
 }
+
+document.addEventListener('click', (e) => {
+  const authorEl = e.target.closest('.clickable-author');
+  if (authorEl && currentUser) {
+    e.stopPropagation();
+    openUserProfile(authorEl.dataset.userId);
+  }
+});
 
 /* ============================================================
    Slow down (don't fully stop) background polling while the tab is
