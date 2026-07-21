@@ -3,20 +3,23 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>चड्डी ब्याडिज</title>
+<title>चिल्लाक्स हाउस</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --ink: #1C1C1E;
-  --ink-soft: #5B5B5E;
-  --paper: #F1F0EC;
+  --ink: #16162B;
+  --ink-soft: #6E6E85;
+  --paper: #FAF7F4;
   --card: #FFFFFF;
-  --border: #E2E0D8;
-  --indigo: #3D4B8C;
-  --indigo-dark: #2C3868;
-  --sage: #6B8068;
-  --danger: #B5473F;
+  --border: #ECE6E1;
+  --indigo: #FF6B4A;
+  --indigo-dark: #D6472A;
+  --sage: #17A398;
+  --danger: #E63950;
+  --shadow-sm: 0 2px 10px -4px rgba(22,22,43,0.08);
+  --shadow-md: 0 10px 30px -12px rgba(22,22,43,0.18);
+  --radius: 16px;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -36,16 +39,18 @@ input, textarea { font-family: inherit; }
 
 /* Setup / auth screens */
 .screen { min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(circle at 20% 20%, rgba(61,75,140,0.08), transparent 40%),
-              radial-gradient(circle at 80% 80%, rgba(107,128,104,0.10), transparent 40%), var(--paper); }
-.card-box { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-  padding: 40px 32px; box-shadow: 0 20px 40px -20px rgba(28,28,30,0.15); }
-.card-title { font-family: 'Fraunces', serif; font-weight: 700; font-size: 28px; margin: 0 0 4px; color: var(--indigo-dark); }
+  background: radial-gradient(circle at 15% 15%, rgba(255,107,74,0.10), transparent 42%),
+              radial-gradient(circle at 85% 85%, rgba(23,163,152,0.12), transparent 42%), var(--paper); }
+.card-box { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--border); border-radius: 22px;
+  padding: 40px 32px; box-shadow: var(--shadow-md); }
+.card-title { font-family: 'Fraunces', serif; font-weight: 700; font-size: 30px; margin: 0 0 4px; background: linear-gradient(135deg, var(--indigo-dark), var(--sage)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .card-subtitle { margin: 0 0 22px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
 .card-form { display: flex; flex-direction: column; gap: 10px; }
 .card-form input, .card-form textarea { padding: 11px 13px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; outline: none; }
 .card-form input:focus, .card-form textarea:focus { border-color: var(--indigo); }
-.btn-primary { padding: 11px 13px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; background: var(--indigo); color: #fff; margin-top: 6px; }
+.btn-primary { padding: 12px 16px; border-radius: 999px; border: none; font-size: 14px; font-weight: 600; background: linear-gradient(135deg, var(--indigo), var(--indigo-dark)); color: #fff; margin-top: 6px; box-shadow: 0 6px 16px -6px rgba(255,107,74,0.5); }
+.btn-primary:hover:not(:disabled) { box-shadow: 0 10px 22px -6px rgba(255,107,74,0.6); transform: translateY(-1px); }
+.btn-primary:disabled { box-shadow: none; }
 .btn-primary:disabled { opacity: .6; }
 .form-error { color: var(--danger); font-size: 13px; margin: 0; }
 .switch-line { margin-top: 18px; font-size: 13px; color: var(--ink-soft); text-align: center; }
@@ -53,13 +58,13 @@ input, textarea { font-family: inherit; }
 
 /* App shell */
 .app { min-height: 100vh; }
-.navbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; background: var(--card);
-  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+.navbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; box-shadow: var(--shadow-sm); }
 .nav-left { display: flex; align-items: center; gap: 20px; }
-.brand { font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px; color: var(--indigo-dark); }
+.brand { font-family: 'Fraunces', serif; font-weight: 700; font-size: 21px; background: linear-gradient(135deg, var(--indigo), var(--sage)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .nav-tabs { display: flex; gap: 6px; }
 .nav-tabs button { background: none; border: none; border-radius: 7px; padding: 6px 14px; font-size: 13px; color: var(--ink-soft); font-weight: 600; }
-.nav-tabs button.active { background: var(--indigo); color: #fff; }
+.nav-tabs button.active { background: linear-gradient(135deg, var(--indigo), var(--indigo-dark)); color: #fff; box-shadow: 0 3px 10px -4px rgba(255,107,74,0.5); }
 .nav-user { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--ink-soft); }
 .avatar-img { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 
@@ -84,7 +89,7 @@ input, textarea { font-family: inherit; }
 .reels-container { height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; background: #000; position: relative; }
 .upload-reel-btn { position: sticky; top: 12px; left: 12px; z-index: 5; background: var(--indigo); color: #fff; border: none; border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 600; margin: 12px; }
 .reel-card { scroll-snap-align: start; height: calc(100vh - 61px); position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
-.reel-video { width: 100%; height: 100%; object-fit: contain; }
+.reel-video { width: 100%; height: 100%; border: none; }
 .reel-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); color: #fff; display: flex; flex-direction: column; gap: 8px; }
 .reel-author { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .reel-caption { font-size: 13px; color: rgba(255,255,255,0.9); }
@@ -109,14 +114,14 @@ input, textarea { font-family: inherit; }
 
 /* Feed */
 .feed { display: flex; flex-direction: column; gap: 16px; }
-.empty-state { text-align: center; color: var(--ink-soft); padding: 40px 0; font-size: 14px; }
-.create-post { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.empty-state { text-align: center; color: var(--ink-soft); padding: 48px 20px; font-size: 14px; background: var(--card); border: 1px dashed var(--border); border-radius: var(--radius); }
+.create-post { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
 .create-post textarea { width: 100%; border: none; resize: none; outline: none; font-size: 15px; }
 .create-post-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .file-btn { font-size: 13px; color: var(--ink-soft); cursor: pointer; }
-.create-post-row button[type='submit'] { background: var(--indigo); color: #fff; border: none; border-radius: 7px; padding: 8px 18px; font-weight: 600; font-size: 13px; }
+.create-post-row button[type='submit'] { background: linear-gradient(135deg, var(--indigo), var(--indigo-dark)); color: #fff; border: none; border-radius: 999px; padding: 9px 20px; font-weight: 600; font-size: 13px; box-shadow: 0 4px 12px -4px rgba(255,107,74,0.5); }
 .create-post-row button[type='submit']:disabled { opacity: .5; }
-.post-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.post-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
 .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--sage); color: #fff; display: flex; align-items: center;
   justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
@@ -142,7 +147,7 @@ input, textarea { font-family: inherit; }
 
 .reaction-row { display: flex; gap: 4px; padding: 8px 0; flex-wrap: wrap; }
 .reaction-row .reaction-btn { background: none; border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 13px; color: var(--ink-soft); }
-.reaction-row .reaction-btn.active { background: var(--paper); border-color: var(--indigo); color: var(--indigo-dark); font-weight: 600; }
+.reaction-row .reaction-btn.active { background: linear-gradient(135deg, rgba(255,107,74,0.14), rgba(23,163,152,0.10)); border-color: var(--indigo); color: var(--indigo-dark); font-weight: 700; }
 
 .share-post-btn { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; font-size: 13px; color: var(--ink-soft); }
 
@@ -203,7 +208,7 @@ input, textarea { font-family: inherit; }
 /* Stories */
 .stories-bar { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 8px; }
 .story-circle { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 64px; position: relative; }
-.story-circle .avatar-img, .story-circle .avatar { border: 2px solid var(--indigo); padding: 2px; }
+.story-circle .avatar-img, .story-circle .avatar { border: 2.5px solid transparent; padding: 2px; background: linear-gradient(var(--card), var(--card)) padding-box, linear-gradient(135deg, var(--indigo), #FFB199, var(--sage)) border-box; }
 .story-circle.add-story { position: relative; }
 .story-plus { position: absolute; top: 40px; left: 40px; background: var(--indigo); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; border: 2px solid var(--card); }
 .story-label { font-size: 11px; color: var(--ink-soft); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64px; }
@@ -228,16 +233,18 @@ input, textarea { font-family: inherit; }
 .chat-bubble-row { display: flex; justify-content: flex-start; }
 .chat-bubble-row.mine { justify-content: flex-end; }
 .chat-bubble { max-width: 75%; background: var(--paper); border-radius: 12px; padding: 8px 12px; font-size: 14px; }
-.chat-bubble-row.mine .chat-bubble { background: var(--indigo); color: #fff; }
+.chat-bubble-row.mine .chat-bubble { background: linear-gradient(135deg, var(--indigo), var(--indigo-dark)); color: #fff; }
 .chat-bubble p { margin: 0; line-height: 1.4; }
 .chat-sender { font-size: 11px; font-weight: 700; color: var(--sage); margin-bottom: 2px; }
 .chat-bubble audio, .chat-bubble video { max-width: 100%; border-radius: 8px; }
 .chat-bubble .audio-embed { width: 260px; height: 54px; border: none; border-radius: 8px; max-width: 100%; }
+.chat-bubble .video-embed { width: 260px; height: 180px; border: none; border-radius: 8px; max-width: 100%; }
+.story-video-embed { width: 100%; height: 100%; border: none; }
 .chat-bubble img { max-width: 100%; border-radius: 8px; display: block; }
 .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
 .chat-input-row input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none; }
 .chat-input-row button { border: 1px solid var(--border); background: var(--paper); border-radius: 8px; padding: 8px 14px; font-size: 14px; }
-.chat-input-row button[type='submit'] { background: var(--indigo); color: #fff; border: none; font-weight: 600; }
+.chat-input-row button[type='submit'] { background: linear-gradient(135deg, var(--indigo), var(--indigo-dark)); color: #fff; border: none; font-weight: 600; }
 .recording-preview { padding: 16px; border-top: 1px solid var(--border); text-align: center; }
 .recording-preview video { max-width: 100%; max-height: 260px; border-radius: 8px; background: #000; }
 .recording-indicator { color: var(--danger); font-weight: 600; font-size: 14px; }
@@ -263,7 +270,7 @@ input, textarea { font-family: inherit; }
 /* Splash screen */
 #splash-screen {
   position: fixed; inset: 0; z-index: 9999;
-  background: radial-gradient(circle at 30% 20%, #4A5CA8 0%, var(--indigo-dark) 55%, #1C2340 100%);
+  background: radial-gradient(circle at 30% 20%, #FF8B6B 0%, var(--indigo-dark) 45%, #1B1030 100%);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
   transition: opacity 0.5s ease, visibility 0.5s ease;
 }
@@ -301,7 +308,7 @@ input, textarea { font-family: inherit; }
 .people-search-form input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; }
 .people-search-form button { border: none; background: var(--indigo); color: #fff; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; }
 .people-section h3 { font-family: 'Fraunces', serif; font-size: 16px; margin: 0 0 10px; color: var(--indigo-dark); }
-.person-card { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.person-card { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow-sm); }
 .person-card .avatar { background: var(--sage); }
 .person-info { flex: 1; min-width: 0; }
 .person-name { font-weight: 600; font-size: 14px; }
@@ -318,7 +325,7 @@ input, textarea { font-family: inherit; }
 
 /* Profile modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(28,28,30,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
-.modal-box { width: 100%; max-width: 380px; background: var(--card); border-radius: 14px; padding: 28px; box-shadow: 0 20px 40px -20px rgba(28,28,30,0.3); }
+.modal-box { width: 100%; max-width: 380px; background: var(--card); border-radius: 22px; padding: 28px; box-shadow: var(--shadow-md); }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .modal-cancel-btn { border: 1px solid var(--border); background: var(--paper); border-radius: 8px; padding: 11px 16px; font-size: 14px; }
 
@@ -361,7 +368,7 @@ input, textarea { font-family: inherit; }
       <div class="globe-line globe-lon globe-lon-2"></div>
     </div>
   </div>
-  <div class="splash-brand">चड्डी ब्याडिज</div>
+  <div class="splash-brand">चिल्लाक्स हाउस</div>
   <div class="splash-tagline">Connect everyone, everywhere.</div>
 </div>
 <div id="root"></div>
@@ -389,7 +396,7 @@ function showFatalError(message) {
 }
 
 const CONFIG_KEY = 'nexus_api_url';
-const USER_KEY = 'nexus_चड्डी ब्याडिज_user';
+const USER_KEY = 'nexus_चिल्लाक्स हाउस_user';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxbI2l7s8erxJlKYHnYL-syBI5v4ZRo1v_CEWhhFlIoqsi8hUWFr9L842AdfIYlaTJ9pA/exec';
 // Always sync to DEFAULT_API_URL — overwrites any stale URL saved from a previous version of this file
 const previousApiUrl = localStorage.getItem(CONFIG_KEY);
@@ -406,10 +413,10 @@ let feedPosts = [];
 let feedHasMore = true;
 let feedInterval = null;
 
-// Generalized conversation state — used for both the चड्डी ब्याडिज room ("general")
+// Generalized conversation state — used for both the चिल्लाक्स हाउस room ("general")
 // and 1:1 DM threads (conversationId = dm_<sortedUserIds>)
 let activeConversationId = 'general';
-let activeConversationTitle = null; // null = चड्डी ब्याडिज chat; else the friend's name (DM)
+let activeConversationTitle = null; // null = चिल्लाक्स हाउस chat; else the friend's name (DM)
 let conversationMessages = [];
 let conversationLastTimestamp = null;
 let conversationInterval = null;
@@ -426,6 +433,7 @@ const commentsCache = {}; // postId -> array
 let suggestedPeople = [];
 let friendRequests = [];
 let friendsList = [];
+let lastPeopleSearchQuery = '';
 let selectedFriend = null; // { userId, name, isGroup? } — set when a thread is open in the Inbox tab
 let activeGroupInfo = null; // { groupId, name, createdBy, members } — populated when a group thread is open
 let activeGroupCallBanner = null; // { groupCallId, callerName, type } — set if a call is already in progress for the open group
@@ -632,7 +640,7 @@ function setupScreenHtml() {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चड्डी ब्याडिज</h1>
+      <h1 class="card-title">चिल्लाक्स हाउस</h1>
       <p class="card-subtitle">Paste your Apps Script Web app URL to connect this app to your Google Sheet database.</p>
       <form class="card-form" id="setup-form">
         <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec" required />
@@ -691,7 +699,7 @@ function authScreenHtml(mode) {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चड्डी ब्याडिज</h1>
+      <h1 class="card-title">चिल्लाक्स हाउस</h1>
       <p class="card-subtitle">${mode === 'login' ? 'Welcome back.' : 'Create your account.'}</p>
       <form class="card-form" id="auth-form">
         ${mode === 'signup' ? `<input type="text" id="auth-name" placeholder="Full name" required />` : ''}
@@ -753,7 +761,7 @@ function appShellHtml() {
   <div class="app">
     <nav class="navbar">
       <div class="nav-left">
-        <span class="brand">चड्डी ब्याडिज</span>
+        <span class="brand">चिल्लाक्स हाउस</span>
         <div class="nav-tabs">
           <button id="tab-feed" class="${currentTab === 'feed' ? 'active' : ''}">Feed</button>
           <button id="tab-reels" class="${currentTab === 'reels' ? 'active' : ''}">Reels</button>
@@ -894,7 +902,7 @@ function renderFeedPanel() {
       </div>
       ${showingSaved ? '' : `
       <div class="create-post">
-        <textarea id="new-post-text" placeholder="Share something with the चड्डी ब्याडिज…" rows="3"></textarea>
+        <textarea id="new-post-text" placeholder="Share something with the चिल्लाक्स हाउस…" rows="3"></textarea>
         <div class="create-post-row">
           <label class="file-btn">
             <span id="new-post-filename">Add photo</span>
@@ -952,7 +960,7 @@ function renderReelsList() {
 function reelCardHtml(reel) {
   return `
   <div class="reel-card">
-    <video src="${reel.videoURL}" loop playsinline controls class="reel-video"></video>
+    <iframe src="${reel.videoURL}" class="reel-video" allow="autoplay"></iframe>
     <div class="reel-overlay">
       <div class="reel-author">${avatarHtml(reel.authorName, reel.authorPhoto, 32)}<span>${escapeHtml(reel.authorName)}</span></div>
       ${reel.caption ? `<div class="reel-caption">${linkify(escapeHtml(reel.caption))}</div>` : ''}
@@ -1069,7 +1077,7 @@ function renderStoryViewer() {
       <button id="story-close-btn">✕</button>
     </div>
     <div class="story-viewer-body">
-      ${story.type === 'video' ? `<video src="${story.mediaURL}" autoplay controls></video>` : `<img src="${story.mediaURL}" alt="" />`}
+      ${story.type === 'video' ? `<iframe src="${story.mediaURL}" class="story-video-embed" allow="autoplay"></iframe>` : `<img src="${story.mediaURL}" alt="" />`}
     </div>
     <div class="story-viewer-nav">
       <button id="story-prev-btn">‹</button>
@@ -1199,7 +1207,7 @@ function attachFeedHandlers() {
     btn.addEventListener('click', async () => {
       const postId = btn.dataset.postId;
       const post = feedPosts.find(p => p.postId === postId);
-      const shareText = `${post.authorName} on चड्डी ब्याडिज: ${post.text || '(photo)'}`;
+      const shareText = `${post.authorName} on चिल्लाक्स हाउस: ${post.text || '(photo)'}`;
       try {
         if (navigator.share) {
           await navigator.share({ text: shareText });
@@ -1337,7 +1345,7 @@ function attachCommentOwnerHandlers(container, postId) {
 }
 
 /* ============================================================
-   Chat (generalized — powers both the चड्डी ब्याडिज room and DMs)
+   Chat (generalized — powers both the चिल्लाक्स हाउस room and DMs)
    ============================================================ */
 let currentTypingUsers = [];
 
@@ -1432,7 +1440,7 @@ function chatBubbleHtml(m) {
   const mine = m.senderId === currentUser.userId;
   let mediaHtml = '';
   if (m.type === 'audio') mediaHtml = `<iframe src="${m.mediaURL}" class="audio-embed" allow="autoplay"></iframe>`;
-  else if (m.type === 'video') mediaHtml = `<video controls src="${m.mediaURL}"></video>`;
+  else if (m.type === 'video') mediaHtml = `<iframe src="${m.mediaURL}" class="video-embed" allow="autoplay"></iframe>`;
   else if (m.type === 'image') mediaHtml = `<img src="${m.mediaURL}" alt="" />`;
 
   let replyPreview = '';
@@ -1465,7 +1473,7 @@ function chatBubbleHtml(m) {
 }
 
 function conversationKind(conversationId) {
-  if (conversationId === 'general') return 'चड्डी ब्याडिज';
+  if (conversationId === 'general') return 'चिल्लाक्स हाउस';
   if (conversationId.startsWith('dm_')) return 'dm';
   if (conversationId.startsWith('group_')) return 'group';
   return 'unknown';
@@ -1495,7 +1503,7 @@ function renderChatPanel() {
         <span>📞 ${escapeHtml(activeGroupCallBanner.callerName)} started a ${activeGroupCallBanner.type} call</span>
         <button id="join-group-call-banner-btn">Join</button>
       </div>` : ''}` : '';
-  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the चड्डी ब्याडिज…';
+  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the चिल्लाक्स हाउस…';
 
   panel.innerHTML = `
     <div class="chat">
@@ -1863,6 +1871,7 @@ function friendStatusActionHtml(user) {
 }
 
 function renderPeoplePanel() {
+  lastPeopleSearchQuery = '';
   const panel = document.getElementById('main-panel');
   panel.innerHTML = `
     <div class="people-panel">
@@ -1888,20 +1897,27 @@ function renderPeoplePanel() {
       </section>
     </div>`;
 
-  document.getElementById('people-search-form').addEventListener('submit', async (e) => {
+  document.getElementById('people-search-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const query = document.getElementById('people-search-input').value.trim();
-    const box = document.getElementById('people-search-results');
-    if (!query) { box.innerHTML = ''; return; }
-    box.innerHTML = '<p class="post-time">Searching…</p>';
-    const res = await apiCall('searchUsers', { query, currentUserId: currentUser.userId });
-    box.innerHTML = res.users.length
-      ? `<div class="people-section"><h3>Search results</h3>${res.users.map(u => personCardHtml(u, friendStatusActionHtml(u))).join('')}</div>`
-      : '<p class="empty-state">No matches.</p>';
-    attachPeopleActionHandlers();
+    lastPeopleSearchQuery = query;
+    runPeopleSearch(query);
   });
 
   refreshPeopleData();
+}
+
+async function runPeopleSearch(query) {
+  const box = document.getElementById('people-search-results');
+  if (!box) return;
+  if (!query) { box.innerHTML = ''; return; }
+  box.innerHTML = '<p class="post-time">Searching…</p>';
+  const res = await apiCall('searchUsers', { query, currentUserId: currentUser.userId });
+  if (!document.getElementById('people-search-results')) return; // panel closed while awaiting
+  box.innerHTML = res.users.length
+    ? `<div class="people-section"><h3>Search results</h3>${res.users.map(u => personCardHtml(u, friendStatusActionHtml(u))).join('')}</div>`
+    : '<p class="empty-state">No matches.</p>';
+  attachPeopleActionHandlers();
 }
 
 async function refreshPeopleData() {
@@ -1935,6 +1951,7 @@ async function refreshPeopleData() {
 
   refreshOnlineStatus(friendsList.map(u => u.userId));
 
+  if (lastPeopleSearchQuery) runPeopleSearch(lastPeopleSearchQuery);
   attachPeopleActionHandlers();
 }
 
@@ -2206,9 +2223,14 @@ function stopRingback() {
 // load roughly 3x, which is what was making the app feel sluggish.
 let backgroundSyncInterval = null;
 
-function startBackgroundSync() {
-  if (backgroundSyncInterval) return;
-  lastActivityCheck = new Date().toISOString(); // don't replay old activity on login
+let currentSyncSpeedMs = null;
+
+function startBackgroundSync(intervalMs) {
+  intervalMs = intervalMs || 6000;
+  if (backgroundSyncInterval && currentSyncSpeedMs === intervalMs) return; // already running at this speed
+  if (backgroundSyncInterval) { clearInterval(backgroundSyncInterval); backgroundSyncInterval = null; }
+  currentSyncSpeedMs = intervalMs;
+  lastActivityCheck = lastActivityCheck || new Date().toISOString(); // don't replay old activity on login
   if ('Notification' in window) {
     if (Notification.permission === 'default') {
       Notification.requestPermission();
@@ -2217,11 +2239,12 @@ function startBackgroundSync() {
     }
   }
   runBackgroundSync(); // fire once immediately, then on the interval
-  backgroundSyncInterval = setInterval(runBackgroundSync, 6000);
+  backgroundSyncInterval = setInterval(runBackgroundSync, intervalMs);
 }
 
 function stopBackgroundSync() {
   if (backgroundSyncInterval) { clearInterval(backgroundSyncInterval); backgroundSyncInterval = null; }
+  currentSyncSpeedMs = null;
 }
 
 async function runBackgroundSync() {
@@ -3051,16 +3074,18 @@ function openProfileModal() {
 }
 
 /* ============================================================
-   Pause background polling while the tab is hidden — avoids
-   wasted requests and makes things feel snappier when you come back
+   Slow down (don't fully stop) background polling while the tab is
+   hidden — keeps notifications arriving in the background (laptop
+   on, tab minimized/another tab active) without hammering requests
+   at full speed the whole time.
    ============================================================ */
 document.addEventListener('visibilitychange', () => {
   if (!currentUser) return;
   if (document.hidden) {
     stopFeedPolling();
-    stopBackgroundSync();
+    startBackgroundSync(20000); // slower cadence in the background, but still notifies
   } else {
-    startBackgroundSync();
+    startBackgroundSync(6000);
     if (currentTab === 'feed') startFeedPolling();
   }
 });
