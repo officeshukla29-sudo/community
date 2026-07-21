@@ -3,23 +3,23 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>चिल्लाक्स हाउस</title>
+<title>चड्डी ब्याडिज</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --ink: #16162B;
-  --ink-soft: #6E6E85;
-  --paper: #FAF7F4;
+  --ink: #050505;
+  --ink-soft: #65676B;
+  --paper: #F0F2F5;
   --card: #FFFFFF;
-  --border: #ECE6E1;
-  --indigo: #FF6B4A;
-  --indigo-dark: #D6472A;
+  --border: #E4E6EB;
+  --indigo: #1877F2;
+  --indigo-dark: #145DBF;
   --sage: #17A398;
   --danger: #E63950;
-  --shadow-sm: 0 2px 10px -4px rgba(22,22,43,0.08);
-  --shadow-md: 0 10px 30px -12px rgba(22,22,43,0.18);
-  --radius: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.06);
+  --shadow-md: 0 8px 24px -8px rgba(0,0,0,0.2);
+  --radius: 12px;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -27,9 +27,9 @@ body { font-family: 'Inter', -apple-system, sans-serif; background: var(--paper)
 button { font-family: inherit; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, transform 0.08s ease; }
 button:active { transform: scale(0.96); }
 input, textarea { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-.post-card, .person-card, .chat-bubble, .story-circle, .reel-card { transition: box-shadow 0.2s ease, transform 0.15s ease; }
+.post-card, .person-card, .chat-bubble, .story-card, .reel-card { transition: box-shadow 0.2s ease, transform 0.15s ease; }
 .post-card:hover, .person-card:hover { box-shadow: 0 6px 18px -10px rgba(28,28,30,0.18); }
-.story-circle:hover { transform: translateY(-2px); }
+.story-card:hover { transform: translateY(-2px); }
 .modal-overlay { animation: modal-fade-in 0.18s ease; }
 .modal-box { animation: modal-pop-in 0.2s ease; }
 @keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -58,18 +58,49 @@ input, textarea { font-family: inherit; }
 
 /* App shell */
 .app { min-height: 100vh; }
-.navbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; box-shadow: var(--shadow-sm); }
-.nav-left { display: flex; align-items: center; gap: 20px; }
-.brand { font-family: 'Fraunces', serif; font-weight: 700; font-size: 21px; background: linear-gradient(135deg, var(--indigo), var(--sage)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.nav-tabs { display: flex; gap: 6px; }
-.nav-tabs button { background: none; border: none; border-radius: 7px; padding: 6px 14px; font-size: 13px; color: var(--ink-soft); font-weight: 600; }
-.nav-tabs button.active { background: linear-gradient(135deg, var(--indigo), var(--indigo-dark)); color: #fff; box-shadow: 0 3px 10px -4px rgba(255,107,74,0.5); }
-.nav-user { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--ink-soft); }
+.navbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: var(--card);
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-sm); gap: 12px; }
+.nav-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; max-width: 340px; }
+.fb-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--indigo); color: #fff; font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.navbar-search { flex: 1; min-width: 0; }
+.navbar-search input { width: 100%; background: var(--paper); border: none; border-radius: 999px; padding: 9px 16px; font-size: 14px; outline: none; }
+.navbar-search input:focus { background: #fff; box-shadow: 0 0 0 2px var(--indigo); }
+
+.nav-tabs { display: flex; gap: 4px; }
+.nav-icon-btn { background: none; border: none; border-radius: 8px; padding: 8px 22px; color: var(--ink-soft); border-bottom: 3px solid transparent; }
+.nav-icon-btn .nav-icon { font-size: 20px; display: block; }
+.nav-icon-btn.active { color: var(--indigo); border-bottom-color: var(--indigo); }
+.nav-icon-btn:hover:not(.active) { background: var(--paper); }
+
+.nav-user { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; max-width: 340px; }
 .avatar-img { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.nav-user span.profile-name-btn { cursor: pointer; display: flex; align-items: center; }
+.nav-user #logout-btn { background: var(--paper); border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 15px; color: var(--ink-soft); }
 
-.nav-user span.profile-name-btn { cursor: pointer; font-weight: 600; color: var(--indigo-dark); display: flex; align-items: center; gap: 8px; }
+.app-body { display: grid; grid-template-columns: 1fr; max-width: 1500px; margin: 0 auto; align-items: start; }
+.left-sidebar, .right-sidebar { display: none; }
 
+@media (min-width: 1080px) {
+  .app-body { grid-template-columns: 260px minmax(0,680px) 300px; gap: 16px; padding: 16px; }
+  .left-sidebar, .right-sidebar { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 74px; }
+  .left-sidebar { gap: 2px; }
+  .right-sidebar { gap: 12px; }
+}
+.side-nav-item { display: flex; align-items: center; gap: 12px; background: none; border: none; padding: 10px 12px; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--ink); text-align: left; }
+.side-nav-item .nav-icon { font-size: 20px; }
+.side-nav-item:hover { background: var(--paper); }
+.side-nav-item.active { background: rgba(24,119,242,0.1); color: var(--indigo); }
+
+.sidebar-widget { background: var(--card); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow-sm); }
+.sidebar-widget-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sidebar-widget-header h3 { margin: 0; font-size: 15px; font-family: 'Fraunces', serif; }
+.sidebar-widget-header button { background: none; border: none; color: var(--indigo); font-size: 13px; font-weight: 600; }
+.sidebar-request { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sidebar-request-info { flex: 1; min-width: 0; }
+.sidebar-request-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; cursor: pointer; }
+.sidebar-request-actions { display: flex; gap: 6px; }
+.sidebar-confirm-btn { background: var(--indigo); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 600; }
+.sidebar-delete-btn { background: var(--paper); border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--ink-soft); }
 .comment { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.4; }
 .comment > div { padding-top: 2px; }
 
@@ -222,11 +253,16 @@ input, textarea { font-family: inherit; }
 
 /* Stories */
 .stories-bar { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 8px; }
-.story-circle { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 64px; position: relative; }
-.story-circle .avatar-img, .story-circle .avatar { border: 2.5px solid transparent; padding: 2px; background: linear-gradient(var(--card), var(--card)) padding-box, linear-gradient(135deg, var(--indigo), #FFB199, var(--sage)) border-box; }
-.story-circle.add-story { position: relative; }
-.story-plus { position: absolute; top: 40px; left: 40px; background: var(--indigo); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; border: 2px solid var(--card); }
-.story-label { font-size: 11px; color: var(--ink-soft); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64px; }
+.story-card { flex-shrink: 0; position: relative; width: 104px; height: 176px; border-radius: 10px; overflow: hidden; cursor: pointer; background-size: cover; background-position: center; background-color: var(--border); box-shadow: var(--shadow-sm); }
+.story-card-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%); }
+.story-card-avatar { position: absolute; top: 8px; left: 8px; }
+.story-card-avatar .avatar-img, .story-card-avatar .avatar { border: 3px solid var(--indigo); }
+.story-card-label { position: absolute; bottom: 8px; left: 8px; right: 8px; color: #fff; font-size: 12px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.story-card.add-story { background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; border: 1px solid var(--border); }
+.story-card-plus-avatar { margin-top: 14px; }
+.story-card-plus-avatar .avatar-img, .story-card-plus-avatar .avatar { border: none; }
+.story-plus { width: 28px; height: 28px; border-radius: 50%; background: var(--indigo); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; border: 3px solid var(--card); margin-top: -14px; }
+.story-card-label-dark { position: static; color: var(--ink); text-align: center; padding: 8px 4px; font-size: 12px; text-shadow: none; }
 
 .story-viewer-overlay { position: fixed; inset: 0; background: #000; z-index: 2500; display: flex; flex-direction: column; }
 .story-viewer-header { display: flex; align-items: center; gap: 10px; padding: 12px; color: #fff; position: relative; z-index: 2; }
@@ -383,7 +419,7 @@ input, textarea { font-family: inherit; }
       <div class="globe-line globe-lon globe-lon-2"></div>
     </div>
   </div>
-  <div class="splash-brand">चिल्लाक्स हाउस</div>
+  <div class="splash-brand">चड्डी ब्याडिज</div>
   <div class="splash-tagline">Connect everyone, everywhere.</div>
 </div>
 <div id="root"></div>
@@ -411,7 +447,7 @@ function showFatalError(message) {
 }
 
 const CONFIG_KEY = 'nexus_api_url';
-const USER_KEY = 'nexus_चिल्लाक्स हाउस_user';
+const USER_KEY = 'nexus_चड्डी ब्याडिज_user';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxbI2l7s8erxJlKYHnYL-syBI5v4ZRo1v_CEWhhFlIoqsi8hUWFr9L842AdfIYlaTJ9pA/exec';
 // Always sync to DEFAULT_API_URL — overwrites any stale URL saved from a previous version of this file
 const previousApiUrl = localStorage.getItem(CONFIG_KEY);
@@ -428,10 +464,10 @@ let feedPosts = [];
 let feedHasMore = true;
 let feedInterval = null;
 
-// Generalized conversation state — used for both the चिल्लाक्स हाउस room ("general")
+// Generalized conversation state — used for both the चड्डी ब्याडिज room ("general")
 // and 1:1 DM threads (conversationId = dm_<sortedUserIds>)
 let activeConversationId = 'general';
-let activeConversationTitle = null; // null = चिल्लाक्स हाउस chat; else the friend's name (DM)
+let activeConversationTitle = null; // null = चड्डी ब्याडिज chat; else the friend's name (DM)
 let conversationMessages = [];
 let conversationLastTimestamp = null;
 let conversationInterval = null;
@@ -449,6 +485,7 @@ let suggestedPeople = [];
 let friendRequests = [];
 let friendsList = [];
 let lastPeopleSearchQuery = '';
+let pendingPeopleSearch = null; // set by navbar search, consumed once when People tab renders
 let selectedFriend = null; // { userId, name, isGroup? } — set when a thread is open in the Inbox tab
 let activeGroupInfo = null; // { groupId, name, createdBy, members } — populated when a group thread is open
 let activeGroupCallBanner = null; // { groupCallId, callerName, type } — set if a call is already in progress for the open group
@@ -655,7 +692,7 @@ function setupScreenHtml() {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चिल्लाक्स हाउस</h1>
+      <h1 class="card-title">चड्डी ब्याडिज</h1>
       <p class="card-subtitle">Paste your Apps Script Web app URL to connect this app to your Google Sheet database.</p>
       <form class="card-form" id="setup-form">
         <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec" required />
@@ -714,7 +751,7 @@ function authScreenHtml(mode) {
   return `
   <div class="screen">
     <div class="card-box">
-      <h1 class="card-title">चिल्लाक्स हाउस</h1>
+      <h1 class="card-title">चड्डी ब्याडिज</h1>
       <p class="card-subtitle">${mode === 'login' ? 'Welcome back.' : 'Create your account.'}</p>
       <form class="card-form" id="auth-form">
         ${mode === 'signup' ? `<input type="text" id="auth-name" placeholder="Full name" required />` : ''}
@@ -772,40 +809,60 @@ function attachAuthHandlers(mode) {
    App shell — navbar + tab switcher
    ============================================================ */
 function appShellHtml() {
+  const tabs = [
+    { id: 'feed', icon: '🏠', label: 'Feed' },
+    { id: 'reels', icon: '🎬', label: 'Reels' },
+    { id: 'chat', icon: '💬', label: 'Chat' },
+    { id: 'people', icon: '👥', label: 'People' },
+    { id: 'inbox', icon: '✉️', label: 'Inbox' },
+  ];
   return `
   <div class="app">
     <nav class="navbar">
       <div class="nav-left">
-        <span class="brand">चिल्लाक्स हाउस</span>
-        <div class="nav-tabs">
-          <button id="tab-feed" class="${currentTab === 'feed' ? 'active' : ''}">Feed</button>
-          <button id="tab-reels" class="${currentTab === 'reels' ? 'active' : ''}">Reels</button>
-          <button id="tab-chat" class="${currentTab === 'chat' ? 'active' : ''}">Chat</button>
-          <button id="tab-people" class="${currentTab === 'people' ? 'active' : ''}">People</button>
-          <button id="tab-inbox" class="${currentTab === 'inbox' ? 'active' : ''}">Inbox</button>
-        </div>
+        <span class="fb-logo">C</span>
+        <form id="navbar-search-form" class="navbar-search">
+          <input id="navbar-search-input" placeholder="Search चड्डी ब्याडिज" autocomplete="off" />
+        </form>
+      </div>
+      <div class="nav-tabs">
+        ${tabs.map(t => `<button id="tab-${t.id}" class="nav-icon-btn ${currentTab === t.id ? 'active' : ''}" title="${t.label}"><span class="nav-icon">${t.icon}</span></button>`).join('')}
       </div>
       <div class="nav-user">
         <button id="bell-btn" class="bell-btn" title="Notifications">🔔${unreadNotificationCount > 0 ? `<span class="bell-badge">${unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>` : ''}</button>
-        <span id="profile-open-btn" class="profile-name-btn">
-          ${avatarHtml(currentUser.name, currentUser.photoURL, 26)}
-          ${escapeHtml(currentUser.name)}
+        <span id="profile-open-btn" class="profile-name-btn" title="${escapeHtml(currentUser.name)}">
+          ${avatarHtml(currentUser.name, currentUser.photoURL, 32)}
         </span>
-        <button id="logout-btn">Log out</button>
+        <button id="logout-btn" title="Log out">⏻</button>
       </div>
     </nav>
-    <main class="main ${currentTab === 'chat' || currentTab === 'inbox' ? 'main-chat' : ''} ${currentTab === 'reels' ? 'main-reels' : ''}" id="main-panel"></main>
+    <div class="app-body">
+      <aside class="left-sidebar">
+        ${tabs.map(t => `<button id="side-tab-${t.id}" class="side-nav-item ${currentTab === t.id ? 'active' : ''}"><span class="nav-icon">${t.icon}</span><span>${t.label}</span></button>`).join('')}
+      </aside>
+      <main class="main ${currentTab === 'chat' || currentTab === 'inbox' ? 'main-chat' : ''} ${currentTab === 'reels' ? 'main-reels' : ''}" id="main-panel"></main>
+      <aside class="right-sidebar" id="right-sidebar"></aside>
+    </div>
   </div>`;
 }
 
 function attachShellHandlers() {
-  document.getElementById('tab-feed').addEventListener('click', () => { currentTab = 'feed'; render(); });
-  document.getElementById('tab-reels').addEventListener('click', () => { currentTab = 'reels'; render(); });
-  document.getElementById('tab-chat').addEventListener('click', () => { currentTab = 'chat'; render(); });
-  document.getElementById('tab-people').addEventListener('click', () => { currentTab = 'people'; render(); });
-  document.getElementById('tab-inbox').addEventListener('click', () => { currentTab = 'inbox'; render(); });
+  const setTab = (t) => { currentTab = t; render(); };
+  ['feed', 'reels', 'chat', 'people', 'inbox'].forEach(t => {
+    document.getElementById('tab-' + t).addEventListener('click', () => setTab(t));
+    const sideBtn = document.getElementById('side-tab-' + t);
+    if (sideBtn) sideBtn.addEventListener('click', () => setTab(t));
+  });
   document.getElementById('profile-open-btn').addEventListener('click', () => openUserProfile(currentUser.userId));
   document.getElementById('bell-btn').addEventListener('click', toggleBellDropdown);
+  document.getElementById('navbar-search-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const query = document.getElementById('navbar-search-input').value.trim();
+    if (!query) return;
+    currentTab = 'people';
+    pendingPeopleSearch = query;
+    render();
+  });
   document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.removeItem(USER_KEY);
     currentUser = null;
@@ -907,9 +964,74 @@ function postCardHtml(post) {
   </article>`;
 }
 
+async function loadRightSidebar() {
+  const sidebar = document.getElementById('right-sidebar');
+  if (!sidebar) return;
+  sidebar.innerHTML = `<div class="sidebar-widget"><p class="post-time">Loading…</p></div>`;
+  try {
+    const [requestsRes, suggestedRes] = await Promise.all([
+      apiCall('getFriendRequests', { userId: currentUser.userId }),
+      apiCall('getPeopleYouMayKnow', { userId: currentUser.userId, limit: 5 }),
+    ]);
+    sidebar.innerHTML = `
+      <div class="sidebar-widget">
+        <div class="sidebar-widget-header"><h3>Friend requests</h3><button id="sidebar-see-all-btn">See all</button></div>
+        ${requestsRes.requests.length
+          ? requestsRes.requests.slice(0, 3).map(r => `
+              <div class="sidebar-request">
+                ${avatarHtml(r.from.name, r.from.photoURL, 40)}
+                <div class="sidebar-request-info">
+                  <div class="sidebar-request-name">${escapeHtml(r.from.name)}</div>
+                  <div class="sidebar-request-actions">
+                    <button class="sidebar-confirm-btn" data-friendship-id="${r.friendshipId}">Confirm</button>
+                    <button class="sidebar-delete-btn" data-friendship-id="${r.friendshipId}">Delete</button>
+                  </div>
+                </div>
+              </div>`).join('')
+          : '<p class="empty-state">No pending requests.</p>'}
+      </div>
+      <div class="sidebar-widget">
+        <div class="sidebar-widget-header"><h3>People you may know</h3></div>
+        ${suggestedRes.users.slice(0, 4).map(u => `
+          <div class="sidebar-request">
+            <span class="clickable-author" data-user-id="${u.userId}">${avatarHtml(u.name, u.photoURL, 40)}</span>
+            <div class="sidebar-request-info">
+              <div class="sidebar-request-name clickable-author" data-user-id="${u.userId}">${escapeHtml(u.name)}</div>
+              <button class="sidebar-confirm-btn add-friend-btn" data-user-id="${u.userId}">Add friend</button>
+            </div>
+          </div>`).join('')}
+      </div>`;
+
+    document.getElementById('sidebar-see-all-btn')?.addEventListener('click', () => { currentTab = 'people'; render(); });
+    sidebar.querySelectorAll('.sidebar-confirm-btn[data-friendship-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await apiCall('respondFriendRequest', { friendshipId: btn.dataset.friendshipId, accept: true });
+        cachedFriends = null;
+        loadRightSidebar();
+      });
+    });
+    sidebar.querySelectorAll('.sidebar-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await apiCall('respondFriendRequest', { friendshipId: btn.dataset.friendshipId, accept: false });
+        loadRightSidebar();
+      });
+    });
+    sidebar.querySelectorAll('.add-friend-btn[data-user-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.textContent = 'Sending…';
+        try {
+          await apiCall('sendFriendRequest', { fromUserId: currentUser.userId, fromName: currentUser.name, toUserId: btn.dataset.userId });
+          btn.textContent = 'Requested';
+        } catch (err) { btn.disabled = false; btn.textContent = 'Add friend'; }
+      });
+    });
+  } catch (err) { sidebar.innerHTML = ''; }
+}
+
 function renderFeedPanel() {
   const panel = document.getElementById('main-panel');
   if (!panel) return;
+  loadRightSidebar();
   panel.innerHTML = `
     <div class="feed">
       <div class="stories-bar" id="stories-bar">${storiesBarHtml()}</div>
@@ -919,7 +1041,7 @@ function renderFeedPanel() {
       </div>
       ${showingSaved ? '' : `
       <div class="create-post">
-        <textarea id="new-post-text" placeholder="Share something with the चिल्लाक्स हाउस…" rows="3"></textarea>
+        <textarea id="new-post-text" placeholder="Share something with the चड्डी ब्याडिज…" rows="3"></textarea>
         <div class="create-post-row">
           <label class="file-btn">
             <span id="new-post-filename">Add photo</span>
@@ -1048,25 +1170,33 @@ function uploadReel() {
 /* ============================================================
    Stories — 24hr photo/video, shown as a bar of circles above the feed
    ============================================================ */
+function addStoryCardHtml() {
+  return `
+    <div class="story-card add-story" id="add-story-btn">
+      <div class="story-card-plus-avatar">${avatarHtml(currentUser.name, currentUser.photoURL, 64)}</div>
+      <span class="story-plus">+</span>
+      <div class="story-card-label story-card-label-dark">Create story</div>
+    </div>`;
+}
+
+function storyCardHtml(group, labelOverride) {
+  const first = group.stories[group.stories.length - 1];
+  const bgAttr = first.type === 'image' ? `style="background-image:url('${first.mediaURL}')"` : `style="background: linear-gradient(135deg, var(--indigo), var(--sage));"`;
+  const label = labelOverride || group.authorName.split(' ')[0];
+  return `
+    <div class="story-card" data-group-id="${group.authorId}" ${bgAttr}>
+      <div class="story-card-overlay"></div>
+      <div class="story-card-avatar">${avatarHtml(group.authorName, group.authorPhoto, 32)}</div>
+      <div class="story-card-label">${escapeHtml(label)}</div>
+    </div>`;
+}
+
 function storiesBarHtml() {
   const mine = storyGroups.find(g => g.authorId === currentUser.userId);
   const others = storyGroups.filter(g => g.authorId !== currentUser.userId);
-  const selfCircle = `
-    <div class="story-circle add-story" id="add-story-btn">
-      ${avatarHtml(currentUser.name, currentUser.photoURL, 56)}
-      <span class="story-plus">+</span>
-      <div class="story-label">${mine ? 'Your story' : 'Add story'}</div>
-    </div>`;
-  const otherCircles = others.map((g, i) => `
-    <div class="story-circle" data-group-id="${g.authorId}">
-      ${avatarHtml(g.authorName, g.authorPhoto, 56)}
-      <div class="story-label">${escapeHtml(g.authorName.split(' ')[0])}</div>
-    </div>`).join('');
-  return selfCircle + (mine ? `
-    <div class="story-circle" data-group-id="${mine.authorId}">
-      ${avatarHtml(mine.authorName, mine.authorPhoto, 56)}
-      <div class="story-label">View</div>
-    </div>` : '') + otherCircles;
+  const first = mine ? storyCardHtml(mine, 'Your story') : addStoryCardHtml();
+  const rest = others.map(g => storyCardHtml(g)).join('');
+  return first + rest;
 }
 
 async function loadStories() {
@@ -1081,7 +1211,7 @@ async function loadStories() {
 function attachStoriesBarHandlers() {
   const addBtn = document.getElementById('add-story-btn');
   if (addBtn) addBtn.addEventListener('click', uploadStory);
-  document.querySelectorAll('.story-circle[data-group-id]').forEach(el => {
+  document.querySelectorAll('.story-card[data-group-id]').forEach(el => {
     el.addEventListener('click', () => openStoryViewer(el.dataset.groupId));
   });
 }
@@ -1258,7 +1388,7 @@ function attachFeedHandlers() {
     btn.addEventListener('click', async () => {
       const postId = btn.dataset.postId;
       const post = feedPosts.find(p => p.postId === postId);
-      const shareText = `${post.authorName} on चिल्लाक्स हाउस: ${post.text || '(photo)'}`;
+      const shareText = `${post.authorName} on चड्डी ब्याडिज: ${post.text || '(photo)'}`;
       try {
         if (navigator.share) {
           await navigator.share({ text: shareText });
@@ -1396,7 +1526,7 @@ function attachCommentOwnerHandlers(container, postId) {
 }
 
 /* ============================================================
-   Chat (generalized — powers both the चिल्लाक्स हाउस room and DMs)
+   Chat (generalized — powers both the चड्डी ब्याडिज room and DMs)
    ============================================================ */
 let currentTypingUsers = [];
 
@@ -1524,7 +1654,7 @@ function chatBubbleHtml(m) {
 }
 
 function conversationKind(conversationId) {
-  if (conversationId === 'general') return 'चिल्लाक्स हाउस';
+  if (conversationId === 'general') return 'चड्डी ब्याडिज';
   if (conversationId.startsWith('dm_')) return 'dm';
   if (conversationId.startsWith('group_')) return 'group';
   return 'unknown';
@@ -1554,7 +1684,7 @@ function renderChatPanel() {
         <span>📞 ${escapeHtml(activeGroupCallBanner.callerName)} started a ${activeGroupCallBanner.type} call</span>
         <button id="join-group-call-banner-btn">Join</button>
       </div>` : ''}` : '';
-  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the चिल्लाक्स हाउस…';
+  const placeholder = isDm ? `Message ${escapeHtml(activeConversationTitle)}…` : 'Message the चड्डी ब्याडिज…';
 
   panel.innerHTML = `
     <div class="chat">
@@ -1959,6 +2089,13 @@ function renderPeoplePanel() {
     runPeopleSearch(query);
   });
 
+  if (pendingPeopleSearch) {
+    document.getElementById('people-search-input').value = pendingPeopleSearch;
+    lastPeopleSearchQuery = pendingPeopleSearch;
+    runPeopleSearch(pendingPeopleSearch);
+    pendingPeopleSearch = null;
+  }
+
   refreshPeopleData();
 }
 
@@ -1997,7 +2134,7 @@ async function refreshPeopleData() {
     : '<p class="empty-state">No pending requests.</p>';
 
   sugBox.innerHTML = suggestedPeople.length
-    ? suggestedPeople.map(u => personCardHtml(u, `<button class="add-friend-btn" data-user-id="${u.userId}">Add friend</button>`)).join('')
+    ? suggestedPeople.map(u => personCardHtml(u, friendStatusActionHtml(u))).join('')
     : '<p class="empty-state">No suggestions right now.</p>';
 
   frBox.innerHTML = friendsList.length
@@ -2092,8 +2229,8 @@ async function loadGroupInfoThenEnter(convoId, friendLike) {
 
 async function checkActiveGroupCallBanner(groupId) {
   try {
-    const res = await apiCall('getActiveGroupCall', { groupId });
-    if (res.groupCall && !groupCallState) {
+    const res = await apiCall('getActiveGroupCall', { groupId, userId: currentUser.userId });
+    if (res.groupCall && !res.groupCall.alreadyIn && !groupCallState) {
       activeGroupCallBanner = { groupCallId: res.groupCall.groupCallId, callerName: res.groupCall.callerName, type: res.groupCall.type };
       renderChatPanel();
     }
@@ -3202,7 +3339,7 @@ function attachProfilePostHandlers(container) {
     btn.addEventListener('click', async () => {
       const postId = btn.dataset.postId;
       const post = profileViewPosts.find(p => p.postId === postId);
-      const shareText = `${post.authorName} on चिल्लाक्स हाउस: ${post.text || '(photo)'}`;
+      const shareText = `${post.authorName} on चड्डी ब्याडिज: ${post.text || '(photo)'}`;
       try {
         if (navigator.share) await navigator.share({ text: shareText });
         else { await navigator.clipboard.writeText(shareText); alert('Post copied — paste it anywhere to share.'); }
